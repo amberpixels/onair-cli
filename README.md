@@ -3,12 +3,11 @@
 See what's on air: **which commit is actually running in production**, and
 where it sits relative to `origin/main`.
 
-```
-  Heroku acme-prod
+<img src="https://raw.githubusercontent.com/amberpixels/onair/main/assets/demo.svg"
+     alt="onair report: a pending build, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
+     width="760">
 
-  Deployed:  a1b2c3d4e  (2h ago) by Eugene  ★ current
-  → Fix the thing • ↗ #1234
-```
+<sub>(Generated, not screenshotted: `freeze --execute "ruby -Ilib scripts/demo.rb" -o assets/demo.svg`)</sub>
 
 `onair` answers one question fast and truthfully. The deployed commit comes
 from the running release's *slug*, never from "newest build" — after a
