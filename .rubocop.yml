@@ -1,0 +1,46 @@
+plugins:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - reference/**/*
+    - vendor/**/*
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 120
+
+Metrics:
+  Enabled: false
+
+Naming/PredicatePrefix:
+  AllowedMethods:
+    - has_commit?
+
+RSpec/ExampleLength:
+  Enabled: false
+
+# Specs that build throwaway git repos / tmpdirs in `around` hooks need
+# instance variables — `let` can't span an around block.
+RSpec/InstanceVariable:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: true
