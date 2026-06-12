@@ -49,6 +49,38 @@ RSpec.describe Onair::Report do
     end
   end
 
+  describe "stale pending" do
+    it "drops a pending build that is already the deployed commit" do
+      pending = Onair::Pending.new(sha: deployed_sha, started_at: nil)
+      snap = snapshot(deployed: deployed(sha: deployed_sha), pending: pending)
+      report = build(snapshot: snap, remote_head: nil, git: FakeGit.new)
+      expect(report.snapshot.pending).to be_nil
+    end
+
+    it "keeps a pending build for a different commit" do
+      pending = Onair::Pending.new(sha: sha_of("b"), started_at: nil)
+      snap = snapshot(deployed: deployed(sha: deployed_sha), pending: pending)
+      report = build(snapshot: snap, remote_head: nil, git: FakeGit.new)
+      expect(report.snapshot.pending).to eq(pending)
+    end
+
+    it "does not report pinned during the stale-pending window" do
+      pending = Onair::Pending.new(sha: deployed_sha, started_at: nil)
+      snap = snapshot(deployed: deployed(sha: deployed_sha), pending: pending,
+                      latest: sha_of("b"), succeeded: [sha_of("b")])
+      report = build(snapshot: snap, remote_head: nil, git: FakeGit.new)
+      expect(report.snapshot.pending).to be_nil
+      expect(report.pinned).to be(false)
+    end
+
+    it "does not misread an unresolvable deploy as the pending build" do
+      pending = Onair::Pending.new(sha: sha_of("b"), started_at: nil)
+      snap = snapshot(deployed: deployed(sha: nil), pending: pending, latest: nil)
+      report = build(snapshot: snap, remote_head: nil, git: FakeGit.new)
+      expect(report.snapshot.pending).to eq(pending)
+    end
+  end
+
   describe "pinned" do
     let(:newer_sha) { sha_of("c") }
 

@@ -12,6 +12,11 @@ module Onair
   #          renderer may need to describe.
   Report = Data.define(:snapshot, :remote_head, :delta, :pinned, :mine, :commits) do
     def self.build(snapshot:, remote_head:, git:)
+      # Pinned is judged before the stale pending is dropped: during the
+      # stale window the newest *succeeded* build is still the previous
+      # deploy, which must not read as a rollback.
+      pinned = pinned?(snapshot)
+      snapshot = drop_stale_pending(snapshot)
       deployed_sha = snapshot.deployed&.sha
       mine = compute_mine(snapshot, git)
       commits = [deployed_sha, snapshot.pending&.sha, mine&.sha].compact.uniq
@@ -20,10 +25,20 @@ module Onair
         snapshot: snapshot,
         remote_head: remote_head,
         delta: compute_delta(deployed_sha, remote_head, git),
-        pinned: pinned?(snapshot),
+        pinned: pinned,
         mine: mine,
         commits: commits
       )
+    end
+
+    # Right after a deploy finishes, the platform's builds list can still
+    # report the just-released build as pending while the releases endpoint
+    # already shows it running — the same commit would render as both
+    # Pending and Deployed. A build that is already on air isn't pending.
+    def self.drop_stale_pending(snapshot)
+      return snapshot unless snapshot.pending && snapshot.pending.sha == snapshot.deployed&.sha
+
+      snapshot.with(pending: nil)
     end
 
     def self.compute_delta(sha, head, git)
@@ -64,6 +79,6 @@ module Onair
         (!identity.name.to_s.empty? && name == identity.name)
     end
 
-    private_class_method :compute_delta, :pinned?, :compute_mine, :identity_match?
+    private_class_method :drop_stale_pending, :compute_delta, :pinned?, :compute_mine, :identity_match?
   end
 end
