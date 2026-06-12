@@ -4,9 +4,10 @@ RSpec.describe Onair::Renderer::Tty do
   let(:now) { Time.utc(2026, 6, 12, 12, 0, 0) }
   let(:deployed_sha) { sha_of("a") }
 
-  def render(report, color: false, hyperlinks: false, repo: "acme/widgets", branch: "main")
+  def render(report, color: false, hyperlinks: false, repo: "acme/widgets", branch: "main", task: nil)
     described_class.new(report: report, app: "acme-prod", platform_label: "Heroku",
-                        branch: branch, repo: repo, color: color, hyperlinks: hyperlinks, now: now).render
+                        branch: branch, repo: repo, color: color, hyperlinks: hyperlinks, now: now,
+                        task: task).render
   end
 
   def report(snapshot:, remote_head: nil, delta: nil, pinned: false, mine: nil, commits: {})
@@ -126,6 +127,24 @@ RSpec.describe Onair::Renderer::Tty do
       "Could not resolve the running commit for v55 (Rollback to v54).\n" \
       "\n"
     )
+  end
+
+  describe "task links" do
+    let(:task) { Onair::TaskLink.from_config("pattern" => 'ABC-\d+', "url" => "https://tracker.example/{task}") }
+    let(:rep) do
+      report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
+             commits: { deployed_sha => commit_info(subject: "ABC-1922: Fix the thing (#123)") })
+    end
+
+    it "wraps configured task ids in hyperlinks, keeping the text identical" do
+      out = render(rep, hyperlinks: true, task: task)
+      expect(out).to include("  → \e]8;;https://tracker.example/ABC-1922\aABC-1922\e]8;;\a: Fix the thing • ")
+    end
+
+    it "leaves subjects untouched when hyperlinks are off or no task is configured" do
+      expect(render(rep, hyperlinks: false, task: task)).to include("  → ABC-1922: Fix the thing • ↗ #123\n")
+      expect(render(rep, hyperlinks: true, task: nil)).to include("ABC-1922: Fix the thing • ")
+    end
   end
 
   it "humanizes ages across all units" do

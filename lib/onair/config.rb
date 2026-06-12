@@ -8,14 +8,15 @@ module Onair
   class Config
     FILENAME = ".onair.yml"
 
-    attr_reader :platform, :app, :repo, :branch, :fetch
+    attr_reader :platform, :app, :repo, :branch, :fetch, :task
 
-    def initialize(platform:, app:, repo:, branch:, fetch:)
+    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil)
       @platform = platform
       @app = app
       @repo = repo
       @branch = branch
       @fetch = fetch
+      @task = task
     end
 
     def self.resolve(flags = {}, env: ENV, dir: Dir.pwd)
@@ -28,7 +29,8 @@ module Onair
         app: app,
         repo: env["GITHUB_REPO"] || file["repo"],
         branch: file["branch"] || "main",
-        fetch: !flags[:no_fetch]
+        fetch: !flags[:no_fetch],
+        task: TaskLink.from_config(file["task"])
       )
     end
 

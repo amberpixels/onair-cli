@@ -75,11 +75,26 @@ the API is a faster transport, never a cache.
 platform: heroku
 app: acme-prod
 repo: acme/widgets   # for PR/commit links; default: inferred from origin
-branch: main            # comparison branch; default: main
+branch: main         # comparison branch; default: main
 ```
 
 Resolution order: CLI flags → env vars (`HEROKU_APP`, `GITHUB_REPO`) →
 `.onair.yml`.
+
+### Task links (optional)
+
+If your commit subjects carry task ids (Jira, Linear, Notion, anything), tell
+onair how to recognize and link them:
+
+```yaml
+task:
+  pattern: 'ABC-\d+'                              # any Ruby regex
+  url: 'https://acme.atlassian.net/browse/{task}' # {task} = the matched id
+```
+
+Matched ids in commit subjects become clickable terminal hyperlinks (the text
+stays identical), and `--json` gains a `task` object (`{ "id", "url" }`) per
+commit. No `task:` section — no behavior, nothing to opt out of.
 
 ## JSON schema
 
@@ -96,7 +111,7 @@ additively:
   "deployed": {
     "sha": "<sha>", "version": 1234, "description": "Deploy a1b2c3d4",
     "deployed_at": "2026-06-12T10:00:00Z", "subject": "Fix the thing (#1234)",
-    "author": "Eugene"
+    "author": "Eugene", "task": null
   },
   "pending": null,
   "delta": { "status": "current", "behind_by": 0 },
@@ -113,6 +128,8 @@ additively:
 - `yours`: `{ "sha", "had_own_build", "subject", "author" }` when your commit
   sits just below the deployed head.
 - `subject`/`author` are `null` when the commit isn't in the local repo.
+- `task`: `{ "id", "url" }` when a `task:` matcher is configured and the
+  subject contains a match, otherwise `null`.
 
 ## Development
 

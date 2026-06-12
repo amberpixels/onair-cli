@@ -22,6 +22,7 @@ module Onair
   Mine = Data.define(:sha, :had_own_build)
 end
 
+require_relative "onair/task_link"
 require_relative "onair/config"
 require_relative "onair/git"
 require_relative "onair/report"

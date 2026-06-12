@@ -16,7 +16,7 @@ module Onair
 
       NOT_FOUND_SUBJECT = "(commit not found in local git)"
 
-      def initialize(report:, app:, platform_label:, branch:, repo:, color:, hyperlinks:, now:)
+      def initialize(report:, app:, platform_label:, branch:, repo:, color:, hyperlinks:, now:, task: nil)
         @report = report
         @app = app
         @platform_label = platform_label
@@ -25,6 +25,7 @@ module Onair
         @color = color
         @hyperlinks = hyperlinks
         @now = now
+        @task = task
       end
 
       def render
@@ -101,12 +102,19 @@ module Onair
       # local repo (sha == nil here) skip linking entirely.
       def linkify(subject, sha)
         if @repo && (match = subject.match(/\A(?<base>.*) \(#(?<pr>\d+)\)\z/))
-          "#{match[:base]} • #{link("https://github.com/#{@repo}/pull/#{match[:pr]}", "↗ ##{match[:pr]}")}"
+          "#{tasked(match[:base])} • #{link("https://github.com/#{@repo}/pull/#{match[:pr]}", "↗ ##{match[:pr]}")}"
         elsif @repo && sha
-          "#{subject} • #{link("https://github.com/#{@repo}/commit/#{sha}", "↗ #{sha[0, 9]}")}"
+          "#{tasked(subject)} • #{link("https://github.com/#{@repo}/commit/#{sha}", "↗ #{sha[0, 9]}")}"
         else
-          subject
+          tasked(subject)
         end
+      end
+
+      # Configured task ids stay visually identical — they just become clickable.
+      def tasked(text)
+        return text unless @task && @hyperlinks
+
+        text.gsub(@task.pattern) { |task_id| link(@task.url_for(task_id), task_id) }
       end
 
       def link(url, text)

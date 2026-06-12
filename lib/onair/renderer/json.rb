@@ -8,12 +8,13 @@ module Onair
     # Machine-readable status. The schema is a public API documented in the
     # README — additive changes only.
     class Json
-      def initialize(report:, app:, platform:, branch:, repo:)
+      def initialize(report:, app:, platform:, branch:, repo:, task: nil)
         @report = report
         @app = app
         @platform = platform
         @branch = branch
         @repo = repo
+        @task = task
       end
 
       def render
@@ -88,7 +89,14 @@ module Onair
 
       def commit_fields(sha)
         info = sha && @report.commits[sha]
-        { subject: info&.subject, author: info&.author_name }
+        { subject: info&.subject, author: info&.author_name, task: task_fields(info&.subject) }
+      end
+
+      def task_fields(subject)
+        task_id = @task&.find(subject)
+        return nil if task_id.nil?
+
+        { id: task_id, url: @task.url_for(task_id) }
       end
 
       def iso(time)

@@ -72,4 +72,23 @@ RSpec.describe Onair::Config do
     expect { described_class.resolve({}, env: {}, dir: @dir) }
       .to raise_error(Onair::Error, /--app NAME, set HEROKU_APP, or run `onair init`/)
   end
+
+  describe "task section" do
+    it "builds a TaskLink from the file" do
+      write_config("task" => { "pattern" => 'ABC-\d+', "url" => "https://tracker.example/{task}" })
+      config = described_class.resolve({}, env: {}, dir: @dir)
+      expect(config.task.find("ABC-7: thing")).to eq("ABC-7")
+    end
+
+    it "is nil when not configured" do
+      write_config
+      expect(described_class.resolve({}, env: {}, dir: @dir).task).to be_nil
+    end
+
+    it "surfaces task config mistakes as friendly errors" do
+      write_config("task" => { "pattern" => 'ABC-\d+' })
+      expect { described_class.resolve({}, env: {}, dir: @dir) }
+        .to raise_error(Onair::Error, /both `pattern` and `url`/)
+    end
+  end
 end
