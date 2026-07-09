@@ -1,13 +1,24 @@
-# onair
+<p align="center">
+  <img src="logo.svg" alt="onair" width="400">
+</p>
 
-See what's on air: **which commit is actually running in production**, and
-where it sits relative to `origin/main`.
+<div align="center">
 
-<img src="https://raw.githubusercontent.com/amberpixels/onair/main/assets/demo.svg"
-     alt="onair report: a pending build, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
-     width="760">
+### See what's on air — which commit is actually running in production.
 
-<sub>(Generated, not screenshotted: `freeze --execute "ruby -Ilib scripts/demo.rb" -o assets/demo.svg`)</sub>
+[![Gem Version](https://img.shields.io/gem/v/onair)](https://rubygems.org/gems/onair)
+[![CI](https://github.com/amberpixels/onair/actions/workflows/ci.yml/badge.svg)](https://github.com/amberpixels/onair/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE.txt)
+
+</div>
+
+---
+
+<p align="center">
+  <img src="assets/demo.svg"
+       alt="onair report: a pending build, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
+       width="760">
+</p>
 
 `onair` answers one question fast and truthfully. The deployed commit comes
 from the running release's *slug*, never from "newest build" — after a
@@ -25,7 +36,7 @@ case.
 5. **Degrade gracefully.** Offline, missing commits, no color support — every
    failure mode renders something useful, never a stack trace.
 
-## Install
+## Installation
 
 ```sh
 gem install onair
