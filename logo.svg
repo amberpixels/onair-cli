@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" width="400" height="80">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 80" width="460" height="80">
   <style>
     text { font-family: 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 20px; white-space: pre; }
   </style>
-  <rect width="400" height="80" rx="6" fill="transparent"/>
+  <rect width="460" height="80" rx="6" fill="transparent"/>
   <!-- Row 1 -->
   <text y="28">
     <tspan fill="#D9251F"> ░█▀▀▀█</tspan><tspan fill="#F03B24"> ░█▄─░█</tspan><tspan fill="#FB5D1E"> ░█▀▀█</tspan><tspan fill="#FF7A17"> ▀█▀</tspan><tspan fill="#FF9A0E"> ░█▀▀█</tspan>
