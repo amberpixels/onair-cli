@@ -137,8 +137,8 @@ RSpec.describe Onair::Git do
     it "parses ssh and https GitHub remotes" do
       {
         "git@github.com:acme/widgets.git" => "acme/widgets",
-        "https://github.com/amberpixels/onair" => "amberpixels/onair",
-        "https://github.com/amberpixels/onair.git" => "amberpixels/onair"
+        "https://github.com/amberpixels/onair-cli" => "amberpixels/onair-cli",
+        "https://github.com/amberpixels/onair-cli.git" => "amberpixels/onair-cli"
       }.each do |url, expected|
         run_git(@work, "remote", "set-url", "origin", url)
         expect(git.origin_repo).to eq(expected)

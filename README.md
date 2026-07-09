@@ -6,8 +6,8 @@
 
 ### See what's on air — which commit is actually running in production.
 
-[![Gem Version](https://img.shields.io/gem/v/onair)](https://rubygems.org/gems/onair)
-[![CI](https://github.com/amberpixels/onair/actions/workflows/ci.yml/badge.svg)](https://github.com/amberpixels/onair/actions/workflows/ci.yml)
+[![Gem Version](https://img.shields.io/gem/v/onair-cli)](https://rubygems.org/gems/onair-cli)
+[![CI](https://github.com/amberpixels/onair-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/amberpixels/onair-cli/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE.txt)
 
 </div>
@@ -39,7 +39,7 @@ case.
 ## Installation
 
 ```sh
-gem install onair
+gem install onair-cli
 ```
 
 Requires Ruby >= 3.2. Auth reuses the Heroku CLI's token from `~/.netrc`
