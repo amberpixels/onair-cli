@@ -35,7 +35,7 @@ module Onair
       def resolve_token
         token = Auth::Netrc.token(HOST)
         token = Auth::HerokuCli.token if token.nil? || token.empty?
-        raise Error, "no Heroku credentials found — run `heroku login`" if token.nil? || token.empty?
+        raise Error, "no Heroku credentials found - run `heroku login`" if token.nil? || token.empty?
 
         token
       end
@@ -112,7 +112,7 @@ module Onair
 
       def error_message(response, path)
         case response.code.to_i
-        when 401 then "Heroku rejected the token (401) — run `heroku login`"
+        when 401 then "Heroku rejected the token (401) - run `heroku login`"
         when 404 then "Heroku app not found: #{app}"
         else "Heroku API returned #{response.code} for #{path}"
         end

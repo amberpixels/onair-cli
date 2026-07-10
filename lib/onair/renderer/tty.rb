@@ -93,7 +93,7 @@ module Onair
 
       def pinned_line
         deployed = snapshot.deployed
-        "  #{paint("⏸ v#{deployed.version} (#{deployed.description}) — newer build " \
+        "  #{paint("⏸ v#{deployed.version} (#{deployed.description}) - newer build " \
                    "#{snapshot.latest_built_sha[0, 9]} succeeded but is not running", :yellow)}"
       end
 

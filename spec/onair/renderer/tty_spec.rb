@@ -76,7 +76,7 @@ RSpec.describe Onair::Renderer::Tty do
                     latest: newer, succeeded: [newer, deployed_sha])
     rep = report(snapshot: snap, pinned: true, commits: { deployed_sha => commit_info })
     expect(render(rep))
-      .to include("  ⏸ v1234 (Rollback to v1230) — newer build ccccccccc succeeded but is not running")
+      .to include("  ⏸ v1234 (Rollback to v1230) - newer build ccccccccc succeeded but is not running")
   end
 
   it "renders the yours row with the released-then-absorbed note" do

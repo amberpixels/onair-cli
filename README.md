@@ -4,7 +4,7 @@
 
 <div align="center">
 
-### See what's on air — which commit is actually running in production.
+### See what's on air - which commit is actually running in production.
 
 [![Gem Version](https://img.shields.io/gem/v/onair-cli)](https://rubygems.org/gems/onair-cli)
 [![CI](https://github.com/amberpixels/onair-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/amberpixels/onair-cli/actions/workflows/ci.yml)
@@ -21,7 +21,7 @@
 </p>
 
 `onair` answers one question fast and truthfully. The deployed commit comes
-from the running release's *slug*, never from "newest build" — after a
+from the running release's *slug*, never from "newest build" - after a
 rollback those differ, and the whole point of this tool is to not lie in that
 case.
 
@@ -33,7 +33,7 @@ case.
    an explicit lazy `git fetch`.
 4. **Platform-agnostic core.** Heroku is the first adapter, not the
    architecture.
-5. **Degrade gracefully.** Offline, missing commits, no color support — every
+5. **Degrade gracefully.** Offline, missing commits, no color support - every
    failure mode renders something useful, never a stack trace.
 
 ## Installation
@@ -61,21 +61,21 @@ is not a TTY or `NO_COLOR` is set.
 ### Speed
 
 The remote head of `origin/<branch>` is resolved through the GitHub API
-(~0.4s) when a token is ambient — `GH_TOKEN`, `GITHUB_TOKEN`, or a logged-in
-`gh` CLI — with `git ls-remote` always racing alongside as the fallback
+(~0.4s) when a token is ambient - `GH_TOKEN`, `GITHUB_TOKEN`, or a logged-in
+`gh` CLI - with `git ls-remote` always racing alongside as the fallback
 (no token, non-GitHub remote, API failure). Both report the live remote ref;
 the API is a faster transport, never a cache.
 
 ### What the report shows
 
-- **Deployed** — the commit the running release was built from, its age,
+- **Deployed** - the commit the running release was built from, its age,
   author, and a delta against `origin/main`: `★ current` or
   `↓ N commits behind`. If the relationship is unknown (diverged history,
-  commits unavailable), no marker is shown — silence over speculation.
-- **Pending** — an in-flight build that's about to replace the deploy.
-- **⏸ pinned** — a newer build succeeded but is *not* what's running
+  commits unavailable), no marker is shown - silence over speculation.
+- **Pending** - an in-flight build that's about to replace the deploy.
+- **⏸ pinned** - a newer build succeeded but is *not* what's running
   (rollback / pinned release).
-- **Yours** — when someone else's commit is deployed but yours sits just
+- **Yours** - when someone else's commit is deployed but yours sits just
   below it: your merge made it to prod, absorbed by a later deploy.
 
 ## Configuration
@@ -105,7 +105,7 @@ task:
 
 Matched ids in commit subjects become clickable terminal hyperlinks (the text
 stays identical), and `--json` gains a `task` object (`{ "id", "url" }`) per
-commit. No `task:` section — no behavior, nothing to opt out of.
+commit. No `task:` section - no behavior, nothing to opt out of.
 
 ## JSON schema
 

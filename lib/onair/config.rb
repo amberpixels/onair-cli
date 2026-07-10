@@ -22,7 +22,7 @@ module Onair
     def self.resolve(flags = {}, env: ENV, dir: Dir.pwd)
       file = find_file(dir) || {}
       app = flags[:app] || env["HEROKU_APP"] || file["app"]
-      raise Error, "no app configured — pass --app NAME, set HEROKU_APP, or run `onair init`" if app.nil?
+      raise Error, "no app configured - pass --app NAME, set HEROKU_APP, or run `onair init`" if app.nil?
 
       new(
         platform: file["platform"] || "heroku",
