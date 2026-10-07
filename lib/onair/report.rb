@@ -56,11 +56,12 @@ module Onair
       count&.positive? ? count : nil
     end
 
-    # A release in flight or failed explains the newer build on its own.
+    # A release of another commit, in flight or failed, explains the newer
+    # build on its own; a same-commit one (config change) does not.
     def self.pinned?(snapshot)
       sha = snapshot.deployed&.sha
       latest = snapshot.latest_built_sha
-      !sha.nil? && !latest.nil? && latest != sha && snapshot.pending.nil? && snapshot.release.nil?
+      !sha.nil? && !latest.nil? && latest != sha && snapshot.pending.nil? && !release_of_other_commit?(snapshot)
     end
 
     def self.release_of_other_commit?(snapshot)

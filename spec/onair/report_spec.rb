@@ -118,6 +118,12 @@ RSpec.describe Onair::Report do
       expect(build(snapshot: snap, remote_head: nil, git: FakeGit.new).pinned).to be(false)
     end
 
+    it "stays pinned while a same-commit release (config change) runs its release phase" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: deployed_sha),
+                      latest: release_sha, succeeded: [release_sha, deployed_sha])
+      expect(build(snapshot: snap, remote_head: nil, git: FakeGit.new).pinned).to be(true)
+    end
+
     it "drops a pending build that the release row already shows" do
       snap = snapshot(deployed: deployed(sha: deployed_sha),
                       pending: Onair::Pending.new(sha: release_sha, started_at: nil),

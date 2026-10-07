@@ -158,6 +158,17 @@ RSpec.describe Onair::Platform::Heroku do
       expect(slug).to have_been_requested.once
     end
 
+    it "drops the in-flight release when its commit cannot be resolved" do
+      stub_releases(body: [newer_release(status: "pending"), release])
+      stub_slug
+      stub_request(:get, "https://api.heroku.com/apps/myapp/slugs/slug-2").to_return(status: 500)
+      stub_builds(body: [])
+
+      snap = adapter.snapshot
+      expect(snap.deployed.sha).to eq(deployed_sha)
+      expect(snap.release).to be_nil
+    end
+
     it "errors when no release in the window has succeeded" do
       stub_releases(body: [newer_release(status: "failed")])
       stub_builds(body: [])
