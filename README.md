@@ -16,7 +16,7 @@
 
 <p align="center">
   <img src="assets/demo.svg"
-       alt="onair report: a pending build, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
+       alt="onair report: a release still in its release phase, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
        width="760">
 </p>
 
