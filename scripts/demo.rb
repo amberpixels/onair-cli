@@ -19,6 +19,7 @@ report = Onair::Report.new(
     deployed: Onair::Deployed.new(sha: deployed_sha, version: 1042, description: "Deploy a1b2c3d4",
                                   deployed_at: now - 7200),
     pending: Onair::Pending.new(sha: pending_sha, started_at: now - 42),
+    release: nil,
     latest_built_sha: deployed_sha,
     succeeded_shas: [deployed_sha, mine_sha]
   ),

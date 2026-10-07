@@ -81,6 +81,59 @@ RSpec.describe Onair::Report do
     end
   end
 
+  describe "release in flight" do
+    let(:release_sha) { sha_of("b") }
+
+    it "suppresses current when a release of another commit is in flight" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: release_sha))
+      report = build(snapshot: snap, remote_head: deployed_sha, git: FakeGit.new)
+      expect(report.delta).to be_nil
+    end
+
+    it "suppresses current after a release of another commit failed" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha),
+                      release: in_flight_release(sha: release_sha, status: :failed))
+      report = build(snapshot: snap, remote_head: deployed_sha, git: FakeGit.new)
+      expect(report.delta).to be_nil
+    end
+
+    it "keeps current when the in-flight release carries the running commit" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: deployed_sha))
+      report = build(snapshot: snap, remote_head: deployed_sha, git: FakeGit.new)
+      expect(report.delta).to eq(:current)
+    end
+
+    it "keeps the behind count, which is true of the running code" do
+      git = FakeGit.new(
+        commits: { deployed_sha => commit_info, head_sha => commit_info },
+        ancestry: { [deployed_sha, head_sha] => 2 }
+      )
+      snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: head_sha))
+      expect(build(snapshot: snap, remote_head: head_sha, git: git).delta).to eq(2)
+    end
+
+    it "is not pinned while the newer build is in its release phase" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: release_sha),
+                      latest: release_sha, succeeded: [release_sha, deployed_sha])
+      expect(build(snapshot: snap, remote_head: nil, git: FakeGit.new).pinned).to be(false)
+    end
+
+    it "drops a pending build that the release row already shows" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha),
+                      pending: Onair::Pending.new(sha: release_sha, started_at: nil),
+                      release: in_flight_release(sha: release_sha))
+      report = build(snapshot: snap, remote_head: nil, git: FakeGit.new)
+      expect(report.snapshot.pending).to be_nil
+      expect(report.snapshot.release.sha).to eq(release_sha)
+    end
+
+    it "includes the release commit in the commits map" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: release_sha))
+      report = build(snapshot: snap, remote_head: nil, git: FakeGit.new)
+      expect(report.commits.keys).to contain_exactly(deployed_sha, release_sha)
+    end
+  end
+
   describe "pinned" do
     let(:newer_sha) { sha_of("c") }
 

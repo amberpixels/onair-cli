@@ -15,10 +15,15 @@ module Builders
     Onair::Deployed.new(sha: sha, version: version, description: description, deployed_at: at)
   end
 
-  def snapshot(deployed:, pending: nil, latest: :deployed, succeeded: nil)
+  def snapshot(deployed:, pending: nil, release: nil, latest: :deployed, succeeded: nil)
     latest = deployed&.sha if latest == :deployed
-    Onair::Snapshot.new(deployed: deployed, pending: pending,
+    Onair::Snapshot.new(deployed: deployed, pending: pending, release: release,
                         latest_built_sha: latest, succeeded_shas: succeeded || [latest].compact)
+  end
+
+  def in_flight_release(sha:, status: :pending, version: 1235, description: "Deploy bbbbbbb",
+                        at: Time.utc(2026, 6, 12, 11, 58, 0))
+    Onair::Release.new(sha: sha, version: version, description: description, status: status, started_at: at)
   end
 
   def identity(name: "Eugene", email: "eugene@example.com")

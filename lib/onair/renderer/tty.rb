@@ -7,6 +7,7 @@ module Onair
       COLORS = {
         bold: "\e[1m",
         green: "\e[0;32m",
+        red: "\e[0;31m",
         yellow: "\e[1;33m",
         dim: "\e[2m",
         purple: "\e[38;5;176m",
@@ -15,6 +16,7 @@ module Onair
       }.freeze
 
       NOT_FOUND_SUBJECT = "(commit not found in local git)"
+      LABEL_WIDTH = "Releasing:".length
 
       def initialize(report:, app:, platform_label:, branch:, repo:, color:, hyperlinks:, now:, task: nil)
         @report = report
@@ -31,6 +33,7 @@ module Onair
       def render
         lines = ["", "  #{code(:purple)}#{@platform_label} #{code(:bold)}#{@app}#{code(:reset)}", ""]
         lines.concat(pending_lines)
+        lines.concat(release_lines)
         lines.concat(deployed_lines)
         lines << ""
         "#{lines.join("\n")}\n"
@@ -46,7 +49,23 @@ module Onair
         pending = snapshot.pending
         return [] if pending.nil?
 
-        row_lines("Pending: ", :yellow, pending.sha, age(pending.started_at)) + [""]
+        row_lines("Pending:", :yellow, pending.sha, age(pending.started_at)) + [""]
+      end
+
+      # Same-commit releases (config changes, rollbacks) name what they are,
+      # since the sha alone would look like the deploy below.
+      def release_lines
+        release = snapshot.release
+        return [] if release.nil?
+
+        detail = "v#{release.version}"
+        detail = "#{detail}: #{release.description}" if release.sha == snapshot.deployed&.sha
+        label, color, note = if release.status == :failed
+                               ["Failed:", :red, "✗ release phase failed (#{detail})"]
+                             else
+                               ["Releasing:", :yellow, "⟳ release phase (#{detail})"]
+                             end
+        row_lines(label, color, release.sha, age(release.started_at), extra: paint(note, color)) + [""]
       end
 
       def deployed_lines
@@ -68,7 +87,7 @@ module Onair
 
         note = mine.had_own_build ? "✓ released, then absorbed by current" : "✓ absorbed by current deploy"
         committed_at = @report.commits[mine.sha]&.committed_at
-        [""] + row_lines("Yours:   ", :cyan, mine.sha, age(committed_at), extra: paint(note, :cyan))
+        [""] + row_lines("Yours:", :cyan, mine.sha, age(committed_at), extra: paint(note, :cyan))
       end
 
       def row_lines(label, color_key, sha, age, extra: nil)
@@ -76,7 +95,8 @@ module Onair
         subject = info&.subject || NOT_FOUND_SUBJECT
         author = info&.author_name || "?"
         age_blurb = age ? "(#{age}) " : ""
-        first = "  #{paint(label, color_key)}  #{paint(sha[0, 9], :bold)}  #{paint("#{age_blurb}by #{author}", :dim)}"
+        padded = label.ljust(LABEL_WIDTH)
+        first = "  #{paint(padded, color_key)}  #{paint(sha[0, 9], :bold)}  #{paint("#{age_blurb}by #{author}", :dim)}"
         first = "#{first}  #{extra}" if extra
         [first, "  #{paint('→', :dim)} #{linkify(subject, info ? sha : nil)}"]
       end

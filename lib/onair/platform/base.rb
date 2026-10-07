@@ -25,6 +25,8 @@ module Onair
     #   deployed:         the release CURRENTLY RUNNING (nil sha only if
     #                     truly unresolvable)
     #   pending:          newest in-flight build, or nil
+    #   release:          newest release above the running one that is not
+    #                     running (release phase pending or failed), or nil
     #   latest_built_sha: newest successfully built sha, or nil
     #   succeeded_shas:   recent succeeded build shas, newest first
     #

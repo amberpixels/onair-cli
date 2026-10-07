@@ -16,15 +16,15 @@ module Onair
       # stale window the newest *succeeded* build is still the previous
       # deploy, which must not read as a rollback.
       pinned = pinned?(snapshot)
-      snapshot = drop_stale_pending(snapshot)
+      snapshot = drop_superseded_pending(snapshot)
       deployed_sha = snapshot.deployed&.sha
       mine = compute_mine(snapshot, git)
-      commits = [deployed_sha, snapshot.pending&.sha, mine&.sha].compact.uniq
-                                                                .to_h { |sha| [sha, git.commit_info(sha)] }
+      commits = [deployed_sha, snapshot.pending&.sha, snapshot.release&.sha, mine&.sha]
+                .compact.uniq.to_h { |sha| [sha, git.commit_info(sha)] }
       new(
         snapshot: snapshot,
         remote_head: remote_head,
-        delta: compute_delta(deployed_sha, remote_head, git),
+        delta: compute_delta(snapshot, remote_head, git),
         pinned: pinned,
         mine: mine,
         commits: commits
@@ -34,16 +34,21 @@ module Onair
     # Right after a deploy finishes, the platform's builds list can still
     # report the just-released build as pending while the releases endpoint
     # already shows it running — the same commit would render as both
-    # Pending and Deployed. A build that is already on air isn't pending.
-    def self.drop_stale_pending(snapshot)
-      return snapshot unless snapshot.pending && snapshot.pending.sha == snapshot.deployed&.sha
+    # Pending and Deployed. A build that is already on air isn't pending, and
+    # one already in its release phase is shown by the release row.
+    def self.drop_superseded_pending(snapshot)
+      pending_sha = snapshot.pending&.sha
+      return snapshot unless pending_sha && [snapshot.deployed&.sha, snapshot.release&.sha].include?(pending_sha)
 
       snapshot.with(pending: nil)
     end
 
-    def self.compute_delta(sha, head, git)
+    # "Current" compares only the running sha to the head, so it stays silent
+    # while a release of a different commit is in flight or failed.
+    def self.compute_delta(snapshot, head, git)
+      sha = snapshot.deployed&.sha
       return nil if sha.nil? || head.nil?
-      return :current if sha == head
+      return (release_of_other_commit?(snapshot) ? nil : :current) if sha == head
       return nil unless git.has_commit?(sha) && git.has_commit?(head)
       return nil unless git.ancestor?(sha, head)
 
@@ -51,10 +56,15 @@ module Onair
       count&.positive? ? count : nil
     end
 
+    # A release in flight or failed explains the newer build on its own.
     def self.pinned?(snapshot)
       sha = snapshot.deployed&.sha
       latest = snapshot.latest_built_sha
-      !sha.nil? && !latest.nil? && latest != sha && snapshot.pending.nil?
+      !sha.nil? && !latest.nil? && latest != sha && snapshot.pending.nil? && snapshot.release.nil?
+    end
+
+    def self.release_of_other_commit?(snapshot)
+      !snapshot.release.nil? && snapshot.release.sha != snapshot.deployed&.sha
     end
 
     # "Did my merge just ship?" — deliberately a 2-commit first-parent window
@@ -79,6 +89,7 @@ module Onair
         (!identity.name.to_s.empty? && name == identity.name)
     end
 
-    private_class_method :drop_stale_pending, :compute_delta, :pinned?, :compute_mine, :identity_match?
+    private_class_method :drop_superseded_pending, :compute_delta, :pinned?, :release_of_other_commit?,
+                         :compute_mine, :identity_match?
   end
 end

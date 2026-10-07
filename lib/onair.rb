@@ -14,10 +14,14 @@ module Onair
 
   Pending = Data.define(:sha, :started_at)
 
+  # A release newer than the running one that is not serving traffic: its
+  # release phase is still running (status :pending) or it failed (:failed).
+  Release = Data.define(:sha, :version, :description, :status, :started_at)
+
   # What a platform adapter returns. `latest_built_sha` is the newest
   # successfully built sha (rollback detection); `succeeded_shas` lists all
   # recent succeeded build shas, newest first ("yours had its own deploy").
-  Snapshot = Data.define(:deployed, :pending, :latest_built_sha, :succeeded_shas)
+  Snapshot = Data.define(:deployed, :pending, :release, :latest_built_sha, :succeeded_shas)
 
   Mine = Data.define(:sha, :had_own_build)
 end

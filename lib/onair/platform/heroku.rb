@@ -8,14 +8,16 @@ module Onair
   module Platform
     class Heroku < Base
       HOST = "api.heroku.com"
+      RELEASE_WINDOW = 10
+      IN_FLIGHT_STATUSES = %w[pending failed].freeze
 
       def snapshot
         token = resolve_token
-        release_thread = quiet_thread { deployed(token) }
+        releases_thread = quiet_thread { releases(token) }
         builds_thread = quiet_thread { builds(token) }
-        deployed = release_thread.value
+        deployed, release = releases_thread.value
         pending, succeeded_shas = builds_thread.value
-        Snapshot.new(deployed: deployed, pending: pending,
+        Snapshot.new(deployed: deployed, pending: pending, release: release,
                      latest_built_sha: succeeded_shas.first, succeeded_shas: succeeded_shas)
       end
 
@@ -40,21 +42,40 @@ module Onair
         token
       end
 
-      # The slug records the commit the running release was built from — the
-      # only reliable source after a rollback, when the builds list still
-      # shows the newer (no-longer-running) build on top.
-      def deployed(token)
+      # The running release is the one Heroku routes to (`current`), not the
+      # newest: while a release phase runs, or after it fails, the previous
+      # release keeps serving. The slug records the commit a release was built
+      # from - the only reliable source after a rollback, when the builds list
+      # still shows the newer (no-longer-running) build on top.
+      def releases(token)
         with_http do |http|
-          release = get(http, token, "/apps/#{app}/releases", range: "version ..; order=desc, max=1").first
-          raise Error, "no releases found for app #{app}" if release.nil?
+          rows = get(http, token, "/apps/#{app}/releases", range: "version ..; order=desc, max=#{RELEASE_WINDOW}")
+          raise Error, "no releases found for app #{app}" if rows.empty?
 
-          Deployed.new(
-            sha: slug_commit(http, token, release.dig("slug", "id")),
-            version: release["version"],
-            description: release["description"],
-            deployed_at: parse_time(release["created_at"])
-          )
+          running = rows.find { |row| row["current"] } || rows.find { |row| row["status"] == "succeeded" }
+          raise Error, "no succeeded release among the last #{RELEASE_WINDOW} for app #{app}" if running.nil?
+
+          deployed_sha = slug_commit(http, token, running.dig("slug", "id"))
+          [deployed(running, deployed_sha), in_flight(http, token, rows.first, running, deployed_sha)]
         end
+      end
+
+      def deployed(row, sha)
+        Deployed.new(sha: sha, version: row["version"], description: row["description"],
+                     deployed_at: parse_time(row["created_at"]))
+      end
+
+      # Only the newest release counts: an older failed one was superseded by
+      # whatever came after it. Without a commit there is no row to render.
+      def in_flight(http, token, newest, running, running_sha)
+        return nil if newest.equal?(running) || !IN_FLIGHT_STATUSES.include?(newest["status"])
+
+        slug_id = newest.dig("slug", "id")
+        sha = slug_id == running.dig("slug", "id") ? running_sha : slug_commit(http, token, slug_id)
+        return nil if sha.nil?
+
+        Release.new(sha: sha, version: newest["version"], description: newest["description"],
+                    status: newest["status"].to_sym, started_at: parse_time(newest["created_at"]))
       end
 
       def slug_commit(http, token, slug_id)
