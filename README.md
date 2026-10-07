@@ -16,7 +16,7 @@
 
 <p align="center">
   <img src="assets/demo.svg"
-       alt="onair report: a pending build, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
+       alt="onair report: a release still in its release phase, the deployed release one commit behind origin/main, and your commit absorbed by the current deploy"
        width="760">
 </p>
 
@@ -73,6 +73,10 @@ the API is a faster transport, never a cache.
   `↓ N commits behind`. If the relationship is unknown (diverged history,
   commits unavailable), no marker is shown - silence over speculation.
 - **Pending** - an in-flight build that's about to replace the deploy.
+- **Releasing** - a newer release whose release phase (e.g. migrations) is
+  still running; production still serves the Deployed row until it finishes.
+- **Failed** - the newest release failed its release phase and never went
+  live. It stays until a newer release succeeds.
 - **⏸ pinned** - a newer build succeeded but is *not* what's running
   (rollback / pinned release).
 - **Yours** - when someone else's commit is deployed but yours sits just
@@ -125,6 +129,7 @@ additively:
     "author": "Eugene", "task": null
   },
   "pending": null,
+  "release": null,
   "delta": { "status": "current", "behind_by": 0 },
   "pinned": null,
   "yours": null
@@ -134,6 +139,10 @@ additively:
 - `delta.status` is `"current"`, `"behind"`, or `"unknown"`.
 - `pending`: `{ "sha", "started_at", "subject", "author" }` when a build is
   in flight.
+- `release`: `{ "sha", "version", "description", "status", "started_at",
+  "subject", "author" }` when a release newer than the running one is not
+  live; `status` is `"pending"` (release phase running) or `"failed"`. While
+  it carries a different sha, `delta.status` is never `"current"`.
 - `pinned`: `{ "version", "description", "latest_built_sha" }` when a newer
   build succeeded but is not running.
 - `yours`: `{ "sha", "had_own_build", "subject", "author" }` when your commit

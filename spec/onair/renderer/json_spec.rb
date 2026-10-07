@@ -28,6 +28,7 @@ RSpec.describe Onair::Renderer::Json do
         "task" => nil
       },
       "pending" => nil,
+      "release" => nil,
       "delta" => { "status" => "current", "behind_by" => 0 },
       "pinned" => nil,
       "yours" => nil
@@ -53,6 +54,20 @@ RSpec.describe Onair::Renderer::Json do
                                  "subject" => nil, "author" => nil, "task" => nil)
     expect(out["yours"]).to eq("sha" => mine_sha, "had_own_build" => true,
                                "subject" => "Fix the thing (#123)", "author" => "Eugene", "task" => nil)
+  end
+
+  it "emits an in-flight release" do
+    release_sha = sha_of("b")
+    report = Onair::Report.new(
+      snapshot: snapshot(deployed: deployed(sha: deployed_sha),
+                         release: in_flight_release(sha: release_sha, status: :failed)),
+      remote_head: nil, delta: nil, pinned: false, mine: nil,
+      commits: { deployed_sha => commit_info, release_sha => commit_info(subject: "Migrate", name: "Bob") }
+    )
+    expect(render(report)["release"]).to eq(
+      "sha" => release_sha, "version" => 1235, "description" => "Deploy bbbbbbb", "status" => "failed",
+      "started_at" => "2026-06-12T11:58:00Z", "subject" => "Migrate", "author" => "Bob", "task" => nil
+    )
   end
 
   it "includes parsed task id and url when a task matcher is configured" do

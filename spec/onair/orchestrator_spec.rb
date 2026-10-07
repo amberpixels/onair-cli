@@ -31,6 +31,14 @@ RSpec.describe Onair::Orchestrator do
     expect(git.fetch_count).to eq(0)
   end
 
+  it "fetches when only the in-flight release commit is missing" do
+    snap = snapshot(deployed: deployed(sha: sha_of("a")), release: in_flight_release(sha: sha_of("b")))
+    releasing = Class.new { define_method(:snapshot) { snap } }.new
+    git = FakeGit.new(commits: { sha_of("a") => commit_info }, remote_head: sha_of("a"))
+    described_class.new(config: config, adapter: releasing, git: git).run
+    expect(git.fetch_count).to eq(1)
+  end
+
   it "propagates adapter failures" do
     failing = Class.new do
       def snapshot

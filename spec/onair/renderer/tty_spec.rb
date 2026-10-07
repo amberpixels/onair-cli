@@ -25,7 +25,7 @@ RSpec.describe Onair::Renderer::Tty do
       "\n  " \
       "Heroku acme-prod\n" \
       "\n  " \
-      "Deployed:  aaaaaaaaa  (2h ago) by Alice  ★ current\n  " \
+      "Deployed:   aaaaaaaaa  (2h ago) by Alice  ★ current\n  " \
       "→ Fix the thing • ↗ #123\n" \
       "\n"
     )
@@ -56,7 +56,7 @@ RSpec.describe Onair::Renderer::Tty do
   it "renders no delta marker when the relationship is unknown" do
     rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 60)),
                  commits: { deployed_sha => commit_info })
-    expect(render(rep)).to include("Deployed:  aaaaaaaaa  (1m ago) by Alice\n")
+    expect(render(rep)).to include("Deployed:   aaaaaaaaa  (1m ago) by Alice\n")
   end
 
   it "renders a pending row above the deployed row" do
@@ -67,7 +67,36 @@ RSpec.describe Onair::Renderer::Tty do
                  commits: { deployed_sha => commit_info,
                             pending_sha => commit_info(subject: "WIP thing", name: "Bob") })
     out = render(rep)
-    expect(out).to include("  Pending:   bbbbbbbbb  (42s ago) by Bob\n  → WIP thing • ↗ bbbbbbbbb\n\n  Deployed:")
+    expect(out).to include("  Pending:    bbbbbbbbb  (42s ago) by Bob\n  → WIP thing • ↗ bbbbbbbbb\n\n  Deployed:")
+  end
+
+  describe "release row" do
+    let(:release_sha) { sha_of("b") }
+    let(:commits) { { deployed_sha => commit_info, release_sha => commit_info(subject: "Migrate", name: "Bob") } }
+
+    it "renders a releasing row above the deployed row" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha, at: now - 7200),
+                      release: in_flight_release(sha: release_sha, at: now - 120))
+      out = render(report(snapshot: snap, commits: commits))
+      expect(out).to include("  Releasing:  bbbbbbbbb  (2m ago) by Bob  ⟳ release phase (v1235)\n  " \
+                             "→ Migrate • ↗ bbbbbbbbb\n\n  Deployed:   aaaaaaaaa")
+    end
+
+    it "renders a failed release in red" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha),
+                      release: in_flight_release(sha: release_sha, status: :failed, at: now - 120))
+      plain = render(report(snapshot: snap, commits: commits))
+      expect(plain).to include("  Failed:     bbbbbbbbb  (2m ago) by Bob  ✗ release phase failed (v1235)\n")
+      colored = render(report(snapshot: snap, commits: commits), color: true)
+      expect(colored).to include("\e[0;31m✗ release phase failed (v1235)\e[0m")
+    end
+
+    it "names a same-commit release by its description" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha),
+                      release: in_flight_release(sha: deployed_sha, description: "Set FOO config vars"))
+      out = render(report(snapshot: snap, commits: commits))
+      expect(out).to include("⟳ release phase (v1235: Set FOO config vars)")
+    end
   end
 
   it "renders the pinned warning under the deployed row" do
@@ -88,7 +117,7 @@ RSpec.describe Onair::Renderer::Tty do
                  mine_sha => commit_info(subject: "My feature (#99)", name: "Eugene", at: now - 86_400) }
     )
     out = render(rep)
-    expect(out).to include("\n\n  Yours:     ddddddddd  (1d ago) by Eugene  ✓ released, then absorbed by current\n")
+    expect(out).to include("\n\n  Yours:      ddddddddd  (1d ago) by Eugene  ✓ released, then absorbed by current\n")
     expect(out).to include("  → My feature • ↗ #99")
   end
 
@@ -106,7 +135,7 @@ RSpec.describe Onair::Renderer::Tty do
     rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: nil)),
                  commits: { deployed_sha => nil })
     out = render(rep)
-    expect(out).to include("Deployed:  aaaaaaaaa  by ?\n")
+    expect(out).to include("Deployed:   aaaaaaaaa  by ?\n")
     expect(out).to include("  → (commit not found in local git)\n")
     expect(out).not_to include("↗")
   end

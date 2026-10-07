@@ -17,7 +17,7 @@ module Onair
       snapshot = snapshot_thread.value
       remote_head = head_thread.value
 
-      needed = [snapshot.deployed&.sha, snapshot.pending&.sha, remote_head].compact
+      needed = [snapshot.deployed&.sha, snapshot.pending&.sha, snapshot.release&.sha, remote_head].compact
       @git.fetch_once! if needed.any? { |sha| !@git.has_commit?(sha) }
 
       Report.build(snapshot: snapshot, remote_head: remote_head, git: @git)

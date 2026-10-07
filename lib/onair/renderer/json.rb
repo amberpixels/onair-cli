@@ -30,6 +30,7 @@ module Onair
           remote_head: @report.remote_head,
           deployed: deployed_payload,
           pending: pending_payload,
+          release: release_payload,
           delta: delta_payload,
           pinned: pinned_payload,
           yours: yours_payload
@@ -59,6 +60,19 @@ module Onair
         return nil if pending.nil?
 
         { sha: pending.sha, started_at: iso(pending.started_at) }.merge(commit_fields(pending.sha))
+      end
+
+      def release_payload
+        release = snapshot.release
+        return nil if release.nil?
+
+        {
+          sha: release.sha,
+          version: release.version,
+          description: release.description,
+          status: release.status.to_s,
+          started_at: iso(release.started_at)
+        }.merge(commit_fields(release.sha))
       end
 
       def delta_payload
