@@ -2,10 +2,13 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-07
+
 - Heroku: Deployed is the release Heroku is serving, not the newest one. A
   newer release still in its release phase shows as `Releasing`, a failed one
-  as `Failed`, and neither counts as on air, triggers `pinned`, or shows
-  `★ current`. `--json` gains a `release` object.
+  as `Failed`, and neither counts as on air. While such a release carries a
+  different commit, `pinned` and `★ current` stay quiet. `--json` gains a
+  `release` object.
 
 ## [0.1.0]
 
