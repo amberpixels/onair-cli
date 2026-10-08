@@ -10,8 +10,10 @@ module Onair
   # mine:    the local user's commit just below someone else's deployed head.
   # commits: sha => CommitInfo (or nil when absent locally) for every sha a
   #          renderer may need to describe.
-  Report = Data.define(:snapshot, :remote_head, :delta, :pinned, :mine, :commits) do
-    def self.build(snapshot:, remote_head:, git:)
+  # rollout: the snapshot's rollout, its handoff estimate dropped once `now`
+  #          has passed it, or nil when unknown.
+  Report = Data.define(:snapshot, :remote_head, :delta, :pinned, :mine, :commits, :rollout) do
+    def self.build(snapshot:, remote_head:, git:, now:)
       # Pinned is judged before the stale pending is dropped: during the
       # stale window the newest *succeeded* build is still the previous
       # deploy, which must not read as a rollback.
@@ -27,8 +29,15 @@ module Onair
         delta: compute_delta(snapshot, remote_head, git),
         pinned: pinned,
         mine: mine,
-        commits: commits
+        commits: commits,
+        rollout: live_rollout(snapshot.rollout, now)
       )
+    end
+
+    def self.live_rollout(rollout, now)
+      return rollout if rollout.nil? || rollout.overlap_until.nil? || rollout.overlap_until > now
+
+      rollout.with(overlap_until: nil)
     end
 
     # Right after a deploy finishes, the platform's builds list can still
@@ -91,6 +100,6 @@ module Onair
     end
 
     private_class_method :drop_superseded_pending, :compute_delta, :pinned?, :release_of_other_commit?,
-                         :compute_mine, :identity_match?
+                         :compute_mine, :identity_match?, :live_rollout
   end
 end

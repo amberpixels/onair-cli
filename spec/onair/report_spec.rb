@@ -4,8 +4,10 @@ RSpec.describe Onair::Report do
   let(:deployed_sha) { sha_of("a") }
   let(:head_sha) { sha_of("f") }
 
+  let(:now) { Time.utc(2026, 6, 12, 12, 0, 0) }
+
   def build(snapshot:, remote_head:, git:)
-    described_class.build(snapshot: snapshot, remote_head: remote_head, git: git)
+    described_class.build(snapshot: snapshot, remote_head: remote_head, git: git, now: now)
   end
 
   describe "delta" do
@@ -278,6 +280,35 @@ RSpec.describe Onair::Report do
       report = build(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
                      remote_head: nil, git: FakeGit.new)
       expect(report.commits).to eq(deployed_sha => nil)
+    end
+  end
+
+  describe "rollout" do
+    def rollout_report(rollout)
+      build(snapshot: snapshot(deployed: deployed(sha: deployed_sha), rollout: rollout), remote_head: nil,
+            git: FakeGit.new)
+    end
+
+    it "is nil when the platform reported none" do
+      expect(rollout_report(nil).rollout).to be_nil
+    end
+
+    it "keeps a handoff estimate that is still ahead" do
+      report = rollout_report(dyno_rollout(overlap_until: now + 90))
+      expect(report.rollout.overlap_until).to eq(now + 90)
+      expect(report.rollout).not_to be_complete
+    end
+
+    it "drops a handoff estimate that has passed, completing the rollout" do
+      report = rollout_report(dyno_rollout(overlap_until: now - 1))
+      expect(report.rollout.overlap_until).to be_nil
+      expect(report.rollout).to be_complete
+    end
+
+    it "is incomplete while any process has dynos off the running release" do
+      rollout = dyno_rollout(processes: [process_rollout, process_rollout(type: "worker", total: 2, ready: 1,
+                                                                          previous: 1)])
+      expect(rollout_report(rollout).rollout).not_to be_complete
     end
   end
 end

@@ -72,6 +72,7 @@ module Onair
         deployed = snapshot.deployed
         if deployed&.sha
           lines = row_lines("Deployed:", :green, deployed.sha, age(deployed.deployed_at), extra: delta_text)
+          lines << rollout_line if @report.rollout
           lines << pinned_line if @report.pinned
           lines.concat(yours_lines)
           lines
@@ -79,6 +80,35 @@ module Onair
           ["  #{paint("Could not resolve the running commit for v#{deployed&.version} " \
                       "(#{deployed&.description}).", :yellow)}"]
         end
+      end
+
+      # The dynos list can look finished while preboot still routes some
+      # traffic to the previous release, so that window gets its own line.
+      def rollout_line
+        rollout = @report.rollout
+        text, color = if rollout.complete?
+                        ["✓ rolled out v#{rollout.version}: #{process_counts(rollout)}", :dim]
+                      elsif rollout.processes.all?(&:complete?)
+                        ["⟳ preboot: previous web dynos may still serve for " \
+                         "~#{remaining(rollout.overlap_until)} (estimate)", :yellow]
+                      else
+                        ["⟳ rolling out v#{rollout.version}: #{process_counts(rollout)}", :yellow]
+                      end
+        "  #{paint(text, color)}"
+      end
+
+      def process_counts(rollout)
+        rollout.processes.map do |process|
+          parts = ["#{process.type} #{process.up}/#{process.total}"]
+          parts.concat(process.waiting.map { |state, count| "#{count} #{state}" })
+          parts << "#{process.previous} on older release" if process.previous.positive?
+          parts.join(", ")
+        end.join(" · ")
+      end
+
+      def remaining(time)
+        seconds = (time - @now).ceil.clamp(0..)
+        seconds < 60 ? "#{seconds}s" : "#{(seconds / 60.0).ceil}m"
       end
 
       def yours_lines

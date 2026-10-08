@@ -29,6 +29,9 @@ module Onair
     #                     running (release phase pending or failed), or nil
     #   latest_built_sha: newest successfully built sha, or nil
     #   succeeded_shas:   recent succeeded build shas, newest first
+    #   rollout:          per process type, how many dynos run the running
+    #                     release, plus an optional estimate of when the
+    #                     previous release stops serving; nil when unknown
     #
     # Adapters own their internal concurrency and auth. Everything above
     # (delta, pinned, mine, rendering) is platform-agnostic and must not

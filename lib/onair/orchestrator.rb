@@ -4,11 +4,12 @@ module Onair
   # Runs the platform adapter and git concurrently, lazily fetches missing
   # commits at most once, and assembles the Report.
   class Orchestrator
-    def initialize(config:, adapter:, git:, repo: nil)
+    def initialize(config:, adapter:, git:, repo: nil, now: Time.now)
       @config = config
       @adapter = adapter
       @git = git
       @repo = repo
+      @now = now
     end
 
     def run
@@ -20,7 +21,7 @@ module Onair
       needed = [snapshot.deployed&.sha, snapshot.pending&.sha, snapshot.release&.sha, remote_head].compact
       @git.fetch_once! if needed.any? { |sha| !@git.has_commit?(sha) }
 
-      Report.build(snapshot: snapshot, remote_head: remote_head, git: @git)
+      Report.build(snapshot: snapshot, remote_head: remote_head, git: @git, now: @now)
     end
 
     private
