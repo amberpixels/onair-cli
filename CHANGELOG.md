@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
 - Heroku: a rollout line under Deployed counts the dynos of each process type
   running the deployed release (`web 1/3, 2 starting`) and says when every
   dyno is up on it. With preboot on, the handoff from the previous web dynos
