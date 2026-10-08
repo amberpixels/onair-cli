@@ -173,7 +173,7 @@ additively:
 
 ```sh
 bundle install
-bundle exec rake        # specs + rubocop
+bundle exec rake        # specs + standard
 ```
 
 The behavioral source of truth is `reference/prod-release.sh`, the

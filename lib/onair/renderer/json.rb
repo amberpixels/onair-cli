@@ -60,7 +60,7 @@ module Onair
         pending = snapshot.pending
         return nil if pending.nil?
 
-        { sha: pending.sha, started_at: iso(pending.started_at) }.merge(commit_fields(pending.sha))
+        {sha: pending.sha, started_at: iso(pending.started_at)}.merge(commit_fields(pending.sha))
       end
 
       def release_payload
@@ -84,8 +84,8 @@ module Onair
           version: rollout.version,
           complete: rollout.complete?,
           processes: rollout.processes.map do |process|
-            { type: process.type, up: process.up, total: process.total,
-              waiting: process.waiting, previous: process.previous }
+            {type: process.type, up: process.up, total: process.total,
+             waiting: process.waiting, previous: process.previous}
           end,
           overlap_until: iso(rollout.overlap_until)
         }
@@ -93,9 +93,9 @@ module Onair
 
       def delta_payload
         case @report.delta
-        when :current then { status: "current", behind_by: 0 }
-        when Integer then { status: "behind", behind_by: @report.delta }
-        else { status: "unknown", behind_by: nil }
+        when :current then {status: "current", behind_by: 0}
+        when Integer then {status: "behind", behind_by: @report.delta}
+        else {status: "unknown", behind_by: nil}
         end
       end
 
@@ -114,19 +114,19 @@ module Onair
         mine = @report.mine
         return nil if mine.nil?
 
-        { sha: mine.sha, had_own_build: mine.had_own_build }.merge(commit_fields(mine.sha))
+        {sha: mine.sha, had_own_build: mine.had_own_build}.merge(commit_fields(mine.sha))
       end
 
       def commit_fields(sha)
         info = sha && @report.commits[sha]
-        { subject: info&.subject, author: info&.author_name, task: task_fields(info&.subject) }
+        {subject: info&.subject, author: info&.author_name, task: task_fields(info&.subject)}
       end
 
       def task_fields(subject)
         task_id = @task&.find(subject)
         return nil if task_id.nil?
 
-        { id: task_id, url: @task.url_for(task_id) }
+        {id: task_id, url: @task.url_for(task_id)}
       end
 
       def iso(time)

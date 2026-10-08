@@ -13,7 +13,7 @@ RSpec.describe Onair::Orchestrator do
   end
 
   it "assembles a report from the adapter snapshot and the remote head" do
-    git = FakeGit.new(commits: { sha_of("a") => commit_info }, remote_head: sha_of("a"))
+    git = FakeGit.new(commits: {sha_of("a") => commit_info}, remote_head: sha_of("a"))
     report = described_class.new(config: config, adapter: adapter, git: git).run
     expect(report.snapshot.deployed.sha).to eq(sha_of("a"))
     expect(report.delta).to eq(:current)
@@ -26,7 +26,7 @@ RSpec.describe Onair::Orchestrator do
   end
 
   it "does not fetch when all shas are present" do
-    git = FakeGit.new(commits: { sha_of("a") => commit_info }, remote_head: sha_of("a"))
+    git = FakeGit.new(commits: {sha_of("a") => commit_info}, remote_head: sha_of("a"))
     described_class.new(config: config, adapter: adapter, git: git).run
     expect(git.fetch_count).to eq(0)
   end
@@ -34,7 +34,7 @@ RSpec.describe Onair::Orchestrator do
   it "fetches when only the in-flight release commit is missing" do
     snap = snapshot(deployed: deployed(sha: sha_of("a")), release: in_flight_release(sha: sha_of("b")))
     releasing = Class.new { define_method(:snapshot) { snap } }.new
-    git = FakeGit.new(commits: { sha_of("a") => commit_info }, remote_head: sha_of("a"))
+    git = FakeGit.new(commits: {sha_of("a") => commit_info}, remote_head: sha_of("a"))
     described_class.new(config: config, adapter: releasing, git: git).run
     expect(git.fetch_count).to eq(1)
   end
@@ -53,7 +53,7 @@ RSpec.describe Onair::Orchestrator do
     now = Time.utc(2026, 6, 12, 12, 0, 0)
     snap = snapshot(deployed: deployed(sha: sha_of("a")), rollout: dyno_rollout(overlap_until: now + 60))
     rolling = Class.new { define_method(:snapshot) { snap } }.new
-    git = FakeGit.new(commits: { sha_of("a") => commit_info }, remote_head: sha_of("a"))
+    git = FakeGit.new(commits: {sha_of("a") => commit_info}, remote_head: sha_of("a"))
 
     early = described_class.new(config: config, adapter: rolling, git: git, now: now).run
     late = described_class.new(config: config, adapter: rolling, git: git, now: now + 61).run

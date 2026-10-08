@@ -91,7 +91,7 @@ module Onair
     end
 
     def opts
-      @dir ? { chdir: @dir } : {}
+      @dir ? {chdir: @dir} : {}
     end
   end
 end

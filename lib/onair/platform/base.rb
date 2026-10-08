@@ -13,7 +13,7 @@ module Onair
         klass = @registry[config.platform]
         if klass.nil?
           raise Error,
-                "unknown platform #{config.platform.inspect} (available: #{@registry.keys.join(', ')})"
+            "unknown platform #{config.platform.inspect} (available: #{@registry.keys.join(", ")})"
         end
 
         klass.new(config)

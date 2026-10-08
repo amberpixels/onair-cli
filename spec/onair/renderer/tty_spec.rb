@@ -6,20 +6,20 @@ RSpec.describe Onair::Renderer::Tty do
 
   def render(report, color: false, hyperlinks: false, repo: "acme/widgets", branch: "main", task: nil)
     described_class.new(report: report, app: "acme-prod", platform_label: "Heroku",
-                        branch: branch, repo: repo, color: color, hyperlinks: hyperlinks, now: now,
-                        task: task).render
+      branch: branch, repo: repo, color: color, hyperlinks: hyperlinks, now: now,
+      task: task).render
   end
 
   def report(snapshot:, remote_head: nil, delta: nil, pinned: false, mine: nil, commits: {}, rollout: nil)
     Onair::Report.new(snapshot: snapshot, remote_head: remote_head, delta: delta,
-                      pinned: pinned, mine: mine, commits: commits, rollout: rollout)
+      pinned: pinned, mine: mine, commits: commits, rollout: rollout)
   end
 
   it "renders the full current-deploy report without color" do
     rep = report(
       snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 7200)),
       delta: :current,
-      commits: { deployed_sha => commit_info }
+      commits: {deployed_sha => commit_info}
     )
     expect(render(rep)).to eq(
       "\n  " \
@@ -35,7 +35,7 @@ RSpec.describe Onair::Renderer::Tty do
     rep = report(
       snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 7200)),
       delta: :current,
-      commits: { deployed_sha => commit_info }
+      commits: {deployed_sha => commit_info}
     )
     out = render(rep, color: true, hyperlinks: true)
     expect(out).to include("\e[38;5;176mHeroku \e[1macme-prod\e[0m")
@@ -45,38 +45,38 @@ RSpec.describe Onair::Renderer::Tty do
 
   it "renders the behind marker with correct pluralization" do
     rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
-                 delta: 3, commits: { deployed_sha => commit_info })
+      delta: 3, commits: {deployed_sha => commit_info})
     expect(render(rep)).to include("↓ 3 commits behind origin/main")
 
     rep_one = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
-                     delta: 1, commits: { deployed_sha => commit_info })
+      delta: 1, commits: {deployed_sha => commit_info})
     expect(render(rep_one)).to include("↓ 1 commit behind origin/main")
   end
 
   it "renders no delta marker when the relationship is unknown" do
     rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 60)),
-                 commits: { deployed_sha => commit_info })
+      commits: {deployed_sha => commit_info})
     expect(render(rep)).to include("Deployed:   aaaaaaaaa  (1m ago) by Alice\n")
   end
 
   it "renders a pending row above the deployed row" do
     pending_sha = sha_of("b")
     snap = snapshot(deployed: deployed(sha: deployed_sha, at: now - 7200),
-                    pending: Onair::Pending.new(sha: pending_sha, started_at: now - 42))
+      pending: Onair::Pending.new(sha: pending_sha, started_at: now - 42))
     rep = report(snapshot: snap, delta: nil,
-                 commits: { deployed_sha => commit_info,
-                            pending_sha => commit_info(subject: "WIP thing", name: "Bob") })
+      commits: {deployed_sha => commit_info,
+                pending_sha => commit_info(subject: "WIP thing", name: "Bob")})
     out = render(rep)
     expect(out).to include("  Pending:    bbbbbbbbb  (42s ago) by Bob\n  → WIP thing • ↗ bbbbbbbbb\n\n  Deployed:")
   end
 
   describe "release row" do
     let(:release_sha) { sha_of("b") }
-    let(:commits) { { deployed_sha => commit_info, release_sha => commit_info(subject: "Migrate", name: "Bob") } }
+    let(:commits) { {deployed_sha => commit_info, release_sha => commit_info(subject: "Migrate", name: "Bob")} }
 
     it "renders a releasing row above the deployed row" do
       snap = snapshot(deployed: deployed(sha: deployed_sha, at: now - 7200),
-                      release: in_flight_release(sha: release_sha, at: now - 120))
+        release: in_flight_release(sha: release_sha, at: now - 120))
       out = render(report(snapshot: snap, commits: commits))
       expect(out).to include("  Releasing:  bbbbbbbbb  (2m ago) by Bob  ⟳ release phase (v1235)\n  " \
                              "→ Migrate • ↗ bbbbbbbbb\n\n  Deployed:   aaaaaaaaa")
@@ -84,7 +84,7 @@ RSpec.describe Onair::Renderer::Tty do
 
     it "renders a failed release in red" do
       snap = snapshot(deployed: deployed(sha: deployed_sha),
-                      release: in_flight_release(sha: release_sha, status: :failed, at: now - 120))
+        release: in_flight_release(sha: release_sha, status: :failed, at: now - 120))
       plain = render(report(snapshot: snap, commits: commits))
       expect(plain).to include("  Failed:     bbbbbbbbb  (2m ago) by Bob  ✗ release phase failed (v1235)\n")
       colored = render(report(snapshot: snap, commits: commits), color: true)
@@ -93,7 +93,7 @@ RSpec.describe Onair::Renderer::Tty do
 
     it "names a same-commit release by its description" do
       snap = snapshot(deployed: deployed(sha: deployed_sha),
-                      release: in_flight_release(sha: deployed_sha, description: "Set FOO config vars"))
+        release: in_flight_release(sha: deployed_sha, description: "Set FOO config vars"))
       out = render(report(snapshot: snap, commits: commits))
       expect(out).to include("⟳ release phase (v1235: Set FOO config vars)")
     end
@@ -102,8 +102,8 @@ RSpec.describe Onair::Renderer::Tty do
   it "renders the pinned warning under the deployed row" do
     newer = sha_of("c")
     snap = snapshot(deployed: deployed(sha: deployed_sha, version: 1234, description: "Rollback to v1230"),
-                    latest: newer, succeeded: [newer, deployed_sha])
-    rep = report(snapshot: snap, pinned: true, commits: { deployed_sha => commit_info })
+      latest: newer, succeeded: [newer, deployed_sha])
+    rep = report(snapshot: snap, pinned: true, commits: {deployed_sha => commit_info})
     expect(render(rep))
       .to include("  ⏸ v1234 (Rollback to v1230) - newer build ccccccccc succeeded but is not running")
   end
@@ -113,8 +113,8 @@ RSpec.describe Onair::Renderer::Tty do
     rep = report(
       snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 7200)),
       mine: Onair::Mine.new(sha: mine_sha, had_own_build: true),
-      commits: { deployed_sha => commit_info,
-                 mine_sha => commit_info(subject: "My feature (#99)", name: "Eugene", at: now - 86_400) }
+      commits: {deployed_sha => commit_info,
+                mine_sha => commit_info(subject: "My feature (#99)", name: "Eugene", at: now - 86_400)}
     )
     out = render(rep)
     expect(out).to include("\n\n  Yours:      ddddddddd  (1d ago) by Eugene  ✓ released, then absorbed by current\n")
@@ -126,14 +126,14 @@ RSpec.describe Onair::Renderer::Tty do
     rep = report(
       snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
       mine: Onair::Mine.new(sha: mine_sha, had_own_build: false),
-      commits: { deployed_sha => commit_info, mine_sha => commit_info(name: "Eugene") }
+      commits: {deployed_sha => commit_info, mine_sha => commit_info(name: "Eugene")}
     )
     expect(render(rep)).to include("✓ absorbed by current deploy")
   end
 
   it "degrades to a not-found row without linking when the commit is absent locally" do
     rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: nil)),
-                 commits: { deployed_sha => nil })
+      commits: {deployed_sha => nil})
     out = render(rep)
     expect(out).to include("Deployed:   aaaaaaaaa  by ?\n")
     expect(out).to include("  → (commit not found in local git)\n")
@@ -142,13 +142,13 @@ RSpec.describe Onair::Renderer::Tty do
 
   it "skips links entirely when no repo is known" do
     rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
-                 commits: { deployed_sha => commit_info(subject: "Plain subject") })
+      commits: {deployed_sha => commit_info(subject: "Plain subject")})
     expect(render(rep, repo: nil)).to include("  → Plain subject\n")
   end
 
   it "renders the unresolvable-deploy fallback line" do
     rep = report(snapshot: snapshot(deployed: deployed(sha: nil, version: 55, description: "Rollback to v54"),
-                                    latest: nil))
+      latest: nil))
     expect(render(rep)).to eq(
       "\n  " \
       "Heroku acme-prod\n" \
@@ -162,7 +162,7 @@ RSpec.describe Onair::Renderer::Tty do
     let(:task) { Onair::TaskLink.from_config("pattern" => 'ABC-\d+', "url" => "https://tracker.example/{task}") }
     let(:rep) do
       report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
-             commits: { deployed_sha => commit_info(subject: "ABC-1922: Fix the thing (#123)") })
+        commits: {deployed_sha => commit_info(subject: "ABC-1922: Fix the thing (#123)")})
     end
 
     it "wraps configured task ids in hyperlinks, keeping the text identical" do
@@ -184,7 +184,7 @@ RSpec.describe Onair::Renderer::Tty do
       172_800 => "2d ago"
     }.each do |seconds, expected|
       rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - seconds)),
-                   commits: { deployed_sha => commit_info })
+        commits: {deployed_sha => commit_info})
       expect(render(rep)).to include("(#{expected})")
     end
   end
@@ -192,14 +192,14 @@ RSpec.describe Onair::Renderer::Tty do
   describe "rollout" do
     def rollout_render(rollout)
       render(report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 60)), delta: :current,
-                    commits: { deployed_sha => commit_info }, rollout: rollout))
+        commits: {deployed_sha => commit_info}, rollout: rollout))
     end
 
     it "shows progress per process type under the deployed row" do
       rollout = dyno_rollout(processes: [
-                               process_rollout(total: 3, ready: 1, waiting: { "starting" => 2 }),
-                               process_rollout(type: "worker", total: 2, ready: 1, previous: 1)
-                             ])
+        process_rollout(total: 3, ready: 1, waiting: {"starting" => 2}),
+        process_rollout(type: "worker", total: 2, ready: 1, previous: 1)
+      ])
       expect(rollout_render(rollout)).to include(
         "→ Fix the thing • ↗ #123\n  " \
         "⟳ rolling out v1234: web 1/3, 2 starting · worker 1/2, 1 on older release\n"
@@ -220,12 +220,12 @@ RSpec.describe Onair::Renderer::Tty do
 
     it "dims a finished rollout and colors one in progress" do
       done = render(report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)), rollout: dyno_rollout),
-                    color: true)
+        color: true)
       expect(done).to include("\e[2m✓ rolled out v1234: web 3/3\e[0m")
 
       busy = render(report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
-                           rollout: dyno_rollout(processes: [process_rollout(ready: 2, waiting: { "starting" => 1 })])),
-                    color: true)
+        rollout: dyno_rollout(processes: [process_rollout(ready: 2, waiting: {"starting" => 1})])),
+        color: true)
       expect(busy).to include("\e[1;33m⟳ rolling out v1234: web 2/3, 1 starting\e[0m")
     end
 

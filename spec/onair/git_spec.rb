@@ -23,7 +23,7 @@ RSpec.describe Onair::Git do
 
   def run_git(dir, *args)
     out, err, status = Open3.capture3("git", "-c", "commit.gpgsign=false", *args, chdir: dir)
-    raise "git #{args.join(' ')} failed: #{err}" unless status.success?
+    raise "git #{args.join(" ")} failed: #{err}" unless status.success?
 
     out
   end

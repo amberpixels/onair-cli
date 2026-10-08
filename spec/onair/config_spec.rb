@@ -12,7 +12,7 @@ RSpec.describe Onair::Config do
   end
 
   def write_config(dir: @dir, **values)
-    defaults = { "platform" => "heroku", "app" => "file-app", "repo" => "file/repo", "branch" => "develop" }
+    defaults = {"platform" => "heroku", "app" => "file-app", "repo" => "file/repo", "branch" => "develop"}
     File.write(File.join(dir, ".onair.yml"), defaults.merge(values).to_yaml)
   end
 
@@ -28,15 +28,15 @@ RSpec.describe Onair::Config do
 
   it "prefers CLI flags over env vars over the file" do
     write_config
-    env = { "HEROKU_APP" => "env-app" }
-    expect(described_class.resolve({ app: "flag-app" }, env: env, dir: @dir).app).to eq("flag-app")
+    env = {"HEROKU_APP" => "env-app"}
+    expect(described_class.resolve({app: "flag-app"}, env: env, dir: @dir).app).to eq("flag-app")
     expect(described_class.resolve({}, env: env, dir: @dir).app).to eq("env-app")
     expect(described_class.resolve({}, env: {}, dir: @dir).app).to eq("file-app")
   end
 
   it "keeps the GITHUB_REPO env override" do
     write_config
-    config = described_class.resolve({}, env: { "GITHUB_REPO" => "env/repo" }, dir: @dir)
+    config = described_class.resolve({}, env: {"GITHUB_REPO" => "env/repo"}, dir: @dir)
     expect(config.repo).to eq("env/repo")
   end
 
@@ -58,13 +58,13 @@ RSpec.describe Onair::Config do
   end
 
   it "defaults platform to heroku and branch to main" do
-    config = described_class.resolve({ app: "x" }, env: {}, dir: @dir)
+    config = described_class.resolve({app: "x"}, env: {}, dir: @dir)
     expect(config.platform).to eq("heroku")
     expect(config.branch).to eq("main")
   end
 
   it "honors --no-fetch" do
-    config = described_class.resolve({ app: "x", no_fetch: true }, env: {}, dir: @dir)
+    config = described_class.resolve({app: "x", no_fetch: true}, env: {}, dir: @dir)
     expect(config.fetch).to be(false)
   end
 
@@ -75,7 +75,7 @@ RSpec.describe Onair::Config do
 
   describe "task section" do
     it "builds a TaskLink from the file" do
-      write_config("task" => { "pattern" => 'ABC-\d+', "url" => "https://tracker.example/{task}" })
+      write_config("task" => {"pattern" => 'ABC-\d+', "url" => "https://tracker.example/{task}"})
       config = described_class.resolve({}, env: {}, dir: @dir)
       expect(config.task.find("ABC-7: thing")).to eq("ABC-7")
     end
@@ -86,7 +86,7 @@ RSpec.describe Onair::Config do
     end
 
     it "surfaces task config mistakes as friendly errors" do
-      write_config("task" => { "pattern" => 'ABC-\d+' })
+      write_config("task" => {"pattern" => 'ABC-\d+'})
       expect { described_class.resolve({}, env: {}, dir: @dir) }
         .to raise_error(Onair::Error, /both `pattern` and `url`/)
     end

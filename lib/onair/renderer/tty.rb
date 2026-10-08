@@ -61,10 +61,10 @@ module Onair
         detail = "v#{release.version}"
         detail = "#{detail}: #{release.description}" if release.sha == snapshot.deployed&.sha
         label, color, note = if release.status == :failed
-                               ["Failed:", :red, "✗ release phase failed (#{detail})"]
-                             else
-                               ["Releasing:", :yellow, "⟳ release phase (#{detail})"]
-                             end
+          ["Failed:", :red, "✗ release phase failed (#{detail})"]
+        else
+          ["Releasing:", :yellow, "⟳ release phase (#{detail})"]
+        end
         row_lines(label, color, release.sha, age(release.started_at), extra: paint(note, color)) + [""]
       end
 
@@ -87,13 +87,13 @@ module Onair
       def rollout_line
         rollout = @report.rollout
         text, color = if rollout.complete?
-                        ["✓ rolled out v#{rollout.version}: #{process_counts(rollout)}", :dim]
-                      elsif rollout.processes.all?(&:complete?)
-                        ["⟳ preboot: previous web dynos may still serve for " \
-                         "~#{remaining(rollout.overlap_until)} (estimate)", :yellow]
-                      else
-                        ["⟳ rolling out v#{rollout.version}: #{process_counts(rollout)}", :yellow]
-                      end
+          ["✓ rolled out v#{rollout.version}: #{process_counts(rollout)}", :dim]
+        elsif rollout.processes.all?(&:complete?)
+          ["⟳ preboot: previous web dynos may still serve for " \
+           "~#{remaining(rollout.overlap_until)} (estimate)", :yellow]
+        else
+          ["⟳ rolling out v#{rollout.version}: #{process_counts(rollout)}", :yellow]
+        end
         "  #{paint(text, color)}"
       end
 
@@ -108,7 +108,7 @@ module Onair
 
       def remaining(time)
         seconds = (time - @now).ceil.clamp(0..)
-        seconds < 60 ? "#{seconds}s" : "#{(seconds / 60.0).ceil}m"
+        (seconds < 60) ? "#{seconds}s" : "#{(seconds / 60.0).ceil}m"
       end
 
       def yours_lines
@@ -128,7 +128,7 @@ module Onair
         padded = label.ljust(LABEL_WIDTH)
         first = "  #{paint(padded, color_key)}  #{paint(sha[0, 9], :bold)}  #{paint("#{age_blurb}by #{author}", :dim)}"
         first = "#{first}  #{extra}" if extra
-        [first, "  #{paint('→', :dim)} #{linkify(subject, info ? sha : nil)}"]
+        [first, "  #{paint("→", :dim)} #{linkify(subject, info ? sha : nil)}"]
       end
 
       def delta_text
@@ -137,7 +137,7 @@ module Onair
           paint("★ current", :green)
         when Integer
           count = @report.delta
-          paint("↓ #{count} #{count == 1 ? 'commit' : 'commits'} behind origin/#{@branch}", :yellow)
+          paint("↓ #{count} #{(count == 1) ? "commit" : "commits"} behind origin/#{@branch}", :yellow)
         end
       end
 

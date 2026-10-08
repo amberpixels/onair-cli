@@ -6,6 +6,5 @@ gemspec
 
 gem "rake"
 gem "rspec"
-gem "rubocop", require: false
-gem "rubocop-rspec", require: false
+gem "standard"
 gem "webmock"

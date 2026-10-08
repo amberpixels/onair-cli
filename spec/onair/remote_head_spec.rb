@@ -10,9 +10,9 @@ RSpec.describe Onair::RemoteHead do
   end
 
   def stub_ref(repo: "acme/widgets", branch: "main", sha: api_sha, status: 200)
-    body = { "ref" => "refs/heads/#{branch}", "object" => { "sha" => sha, "type" => "commit" } }
+    body = {"ref" => "refs/heads/#{branch}", "object" => {"sha" => sha, "type" => "commit"}}
     stub_request(:get, "https://api.github.com/repos/#{repo}/git/ref/heads/#{branch}")
-      .with(headers: { "Authorization" => "Bearer gh-tok", "Accept" => "application/vnd.github+json" })
+      .with(headers: {"Authorization" => "Bearer gh-tok", "Accept" => "application/vnd.github+json"})
       .to_return(status: status, body: body.to_json)
   end
 

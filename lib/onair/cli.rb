@@ -69,12 +69,12 @@ module Onair
 
       if flags[:json]
         puts Renderer::Json.new(report: report, app: config.app, platform: config.platform,
-                                branch: config.branch, repo: repo, task: config.task).render
+          branch: config.branch, repo: repo, task: config.task).render
       else
         tty = $stdout.tty?
         print Renderer::Tty.new(report: report, app: config.app, platform_label: adapter.display_name,
-                                branch: config.branch, repo: repo, task: config.task,
-                                color: tty && !no_color?, hyperlinks: tty, now: now).render
+          branch: config.branch, repo: repo, task: config.task,
+          color: tty && !no_color?, hyperlinks: tty, now: now).render
       end
     end
 

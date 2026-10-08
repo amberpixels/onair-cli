@@ -8,36 +8,36 @@ RSpec.describe Onair::Platform::Heroku do
   let(:newer_sha) { sha_of("c") }
 
   let(:release) do
-    { "version" => 1234, "description" => "Deploy aaaaaaa", "status" => "succeeded", "current" => true,
-      "created_at" => "2026-06-12T10:00:00Z", "slug" => { "id" => "slug-1" } }
+    {"version" => 1234, "description" => "Deploy aaaaaaa", "status" => "succeeded", "current" => true,
+     "created_at" => "2026-06-12T10:00:00Z", "slug" => {"id" => "slug-1"}}
   end
 
   def succeeded_build(sha, at: "2026-06-12T09:00:00Z")
-    { "status" => "succeeded", "source_blob" => { "version" => sha }, "created_at" => at }
+    {"status" => "succeeded", "source_blob" => {"version" => sha}, "created_at" => at}
   end
 
   def stub_releases(body: [release], status: 200)
     stub_request(:get, "https://api.heroku.com/apps/myapp/releases")
-      .with(headers: { "Authorization" => "Bearer tok-123",
-                       "Accept" => "application/vnd.heroku+json; version=3",
-                       "Range" => "version ..; order=desc, max=10",
-                       "Accept-Encoding" => "identity" })
+      .with(headers: {"Authorization" => "Bearer tok-123",
+                      "Accept" => "application/vnd.heroku+json; version=3",
+                      "Range" => "version ..; order=desc, max=10",
+                      "Accept-Encoding" => "identity"})
       .to_return(status: status, body: body.to_json)
   end
 
   def stub_slug(commit: deployed_sha)
     stub_request(:get, "https://api.heroku.com/apps/myapp/slugs/slug-1")
-      .to_return(status: 200, body: { "commit" => commit }.to_json)
+      .to_return(status: 200, body: {"commit" => commit}.to_json)
   end
 
   def stub_builds(body:, status: 200)
     stub_request(:get, "https://api.heroku.com/apps/myapp/builds")
-      .with(headers: { "Range" => "created_at ..; order=desc, max=10" })
+      .with(headers: {"Range" => "created_at ..; order=desc, max=10"})
       .to_return(status: status, body: body.to_json)
   end
 
   def dyno(type: "web", state: "up", version: 1234, updated_at: "2026-06-12T10:01:00Z")
-    { "type" => type, "state" => state, "release" => { "version" => version }, "updated_at" => updated_at }
+    {"type" => type, "state" => state, "release" => {"version" => version}, "updated_at" => updated_at}
   end
 
   def stub_dynos(body: [dyno], status: 200)
@@ -47,7 +47,7 @@ RSpec.describe Onair::Platform::Heroku do
 
   def stub_preboot(enabled: false, status: 200)
     stub_request(:get, "https://api.heroku.com/apps/myapp/features/preboot")
-      .to_return(status: status, body: { "name" => "preboot", "enabled" => enabled }.to_json)
+      .to_return(status: status, body: {"name" => "preboot", "enabled" => enabled}.to_json)
   end
 
   before do
@@ -63,8 +63,8 @@ RSpec.describe Onair::Platform::Heroku do
 
     snap = adapter.snapshot
     expect(snap.deployed).to eq(Onair::Deployed.new(sha: deployed_sha, version: 1234,
-                                                    description: "Deploy aaaaaaa",
-                                                    deployed_at: Time.utc(2026, 6, 12, 10, 0, 0)))
+      description: "Deploy aaaaaaa",
+      deployed_at: Time.utc(2026, 6, 12, 10, 0, 0)))
     expect(snap.pending).to be_nil
     expect(snap.latest_built_sha).to eq(deployed_sha)
   end
@@ -85,27 +85,27 @@ RSpec.describe Onair::Platform::Heroku do
     stub_releases
     stub_slug
     stub_builds(body: [
-                  { "status" => "pending", "source_blob" => { "version" => pending_sha },
-                    "created_at" => "2026-06-12T11:59:00Z" },
-                  succeeded_build(deployed_sha)
-                ])
+      {"status" => "pending", "source_blob" => {"version" => pending_sha},
+       "created_at" => "2026-06-12T11:59:00Z"},
+      succeeded_build(deployed_sha)
+    ])
 
     snap = adapter.snapshot
     expect(snap.pending).to eq(Onair::Pending.new(sha: pending_sha,
-                                                  started_at: Time.utc(2026, 6, 12, 11, 59, 0)))
+      started_at: Time.utc(2026, 6, 12, 11, 59, 0)))
   end
 
   describe "release phase" do
     let(:release_sha) { sha_of("b") }
 
     def newer_release(status:, slug_id: "slug-2", version: 1235)
-      { "version" => version, "description" => "Deploy bbbbbbb", "status" => status, "current" => false,
-        "created_at" => "2026-06-12T11:58:00Z", "slug" => { "id" => slug_id } }
+      {"version" => version, "description" => "Deploy bbbbbbb", "status" => status, "current" => false,
+       "created_at" => "2026-06-12T11:58:00Z", "slug" => {"id" => slug_id}}
     end
 
     def stub_slug2(commit: release_sha)
       stub_request(:get, "https://api.heroku.com/apps/myapp/slugs/slug-2")
-        .to_return(status: 200, body: { "commit" => commit }.to_json)
+        .to_return(status: 200, body: {"commit" => commit}.to_json)
     end
 
     it "keeps the current release as deployed while a newer one runs its release phase" do
@@ -118,8 +118,8 @@ RSpec.describe Onair::Platform::Heroku do
       expect(snap.deployed.sha).to eq(deployed_sha)
       expect(snap.deployed.version).to eq(1234)
       expect(snap.release).to eq(Onair::Release.new(sha: release_sha, version: 1235, description: "Deploy bbbbbbb",
-                                                    status: :pending,
-                                                    started_at: Time.utc(2026, 6, 12, 11, 58, 0)))
+        status: :pending,
+        started_at: Time.utc(2026, 6, 12, 11, 58, 0)))
     end
 
     it "surfaces a failed release without counting it as deployed" do
@@ -135,7 +135,7 @@ RSpec.describe Onair::Platform::Heroku do
 
     it "reports only the newest release when a failed one was followed by another attempt" do
       stub_releases(body: [newer_release(status: "pending", slug_id: "slug-2", version: 1236),
-                           newer_release(status: "failed", slug_id: "slug-3"), release])
+        newer_release(status: "failed", slug_id: "slug-3"), release])
       stub_slug
       stub_slug2
       stub_builds(body: [])
@@ -205,22 +205,22 @@ RSpec.describe Onair::Platform::Heroku do
 
       expect(adapter.snapshot.rollout).to eq(
         Onair::Rollout.new(version: 1234, overlap_until: nil, processes: [
-                             Onair::ProcessRollout.new(type: "web", total: 2, up: 2, waiting: {}, previous: 0),
-                             Onair::ProcessRollout.new(type: "worker", total: 1, up: 1, waiting: {}, previous: 0)
-                           ])
+          Onair::ProcessRollout.new(type: "web", total: 2, up: 2, waiting: {}, previous: 0),
+          Onair::ProcessRollout.new(type: "worker", total: 1, up: 1, waiting: {}, previous: 0)
+        ])
       )
       expect(adapter.snapshot.rollout).to be_complete
     end
 
     it "counts dynos still starting, crashed, or on an older release" do
       stub_dynos(body: [dyno(type: "worker"), dyno, dyno(state: "starting"), dyno(state: "crashed"),
-                        dyno(version: 1233)])
+        dyno(version: 1233)])
 
       rollout = adapter.snapshot.rollout
       expect(rollout.processes.map(&:type)).to eq(%w[web worker])
       expect(rollout.processes.first).to eq(
-        Onair::ProcessRollout.new(type: "web", total: 4, up: 1, waiting: { "starting" => 1, "crashed" => 1 },
-                                  previous: 1)
+        Onair::ProcessRollout.new(type: "web", total: 4, up: 1, waiting: {"starting" => 1, "crashed" => 1},
+          previous: 1)
       )
       expect(rollout).not_to be_complete
     end
@@ -233,7 +233,7 @@ RSpec.describe Onair::Platform::Heroku do
 
     it "ignores one-off dynos" do
       stub_dynos(body: [dyno, dyno(type: "run", state: "starting"), dyno(type: "scheduler", version: 1200),
-                        dyno(type: "release", state: "starting")])
+        dyno(type: "release", state: "starting")])
 
       expect(adapter.snapshot.rollout.processes.map(&:type)).to eq(["web"])
     end
@@ -247,7 +247,7 @@ RSpec.describe Onair::Platform::Heroku do
     it "estimates the preboot handoff from the newest web dyno once all web dynos are up" do
       stub_preboot(enabled: true)
       stub_dynos(body: [dyno(updated_at: "2026-06-12T11:58:00Z"), dyno(updated_at: "2026-06-12T11:59:00Z"),
-                        dyno(type: "worker", updated_at: "2026-06-12T11:59:30Z")])
+        dyno(type: "worker", updated_at: "2026-06-12T11:59:30Z")])
 
       expect(adapter.snapshot.rollout.overlap_until).to eq(Time.utc(2026, 6, 12, 12, 2, 0))
     end

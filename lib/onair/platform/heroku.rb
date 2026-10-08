@@ -26,8 +26,8 @@ module Onair
         pending, succeeded_shas = builds_thread.value
         dyno_rows, preboot = dynos_thread.value
         Snapshot.new(deployed: deployed, pending: pending, release: release,
-                     latest_built_sha: succeeded_shas.first, succeeded_shas: succeeded_shas,
-                     rollout: rollout(dyno_rows, preboot, deployed.version))
+          latest_built_sha: succeeded_shas.first, succeeded_shas: succeeded_shas,
+          rollout: rollout(dyno_rows, preboot, deployed.version))
       end
 
       private
@@ -71,7 +71,7 @@ module Onair
 
       def deployed(row, sha)
         Deployed.new(sha: sha, version: row["version"], description: row["description"],
-                     deployed_at: parse_time(row["created_at"]))
+          deployed_at: parse_time(row["created_at"]))
       end
 
       # Only the newest release counts: an older failed one was superseded by
@@ -80,11 +80,11 @@ module Onair
         return nil if newest.equal?(running) || !IN_FLIGHT_STATUSES.include?(newest["status"])
 
         slug_id = newest.dig("slug", "id")
-        sha = slug_id == running.dig("slug", "id") ? running_sha : slug_commit(http, token, slug_id)
+        sha = (slug_id == running.dig("slug", "id")) ? running_sha : slug_commit(http, token, slug_id)
         return nil if sha.nil?
 
         Release.new(sha: sha, version: newest["version"], description: newest["description"],
-                    status: newest["status"].to_sym, started_at: parse_time(newest["created_at"]))
+          status: newest["status"].to_sym, started_at: parse_time(newest["created_at"]))
       end
 
       def slug_commit(http, token, slug_id)
@@ -105,7 +105,7 @@ module Onair
         pending_sha = pending_build&.dig("source_blob", "version")
         pending = pending_sha && Pending.new(sha: pending_sha, started_at: parse_time(pending_build["created_at"]))
         succeeded = builds.select { |build| build["status"] == "succeeded" }
-                          .filter_map { |build| build.dig("source_blob", "version") }
+          .filter_map { |build| build.dig("source_blob", "version") }
         [pending, succeeded]
       rescue Error
         [nil, []]
@@ -135,17 +135,17 @@ module Onair
         return nil if formation.empty?
 
         processes = formation.group_by { |dyno| dyno["type"] }
-                             .sort_by { |type, _| [type == "web" ? 0 : 1, type] }
-                             .map { |type, dynos| process_rollout(type, dynos, version) }
+          .sort_by { |type, _| [(type == "web") ? 0 : 1, type] }
+          .map { |type, dynos| process_rollout(type, dynos, version) }
         Rollout.new(version: version, processes: processes,
-                    overlap_until: preboot ? preboot_handoff(formation, version) : nil)
+          overlap_until: preboot ? preboot_handoff(formation, version) : nil)
       end
 
       def process_rollout(type, dynos, version)
         current, previous = dynos.partition { |dyno| dyno.dig("release", "version") == version }
         waiting = current.map { |dyno| dyno["state"] }.reject { |state| SERVING_STATES.include?(state) }.tally
         ProcessRollout.new(type: type, total: dynos.size, up: current.size - waiting.values.sum,
-                           waiting: waiting, previous: previous.size)
+          waiting: waiting, previous: previous.size)
       end
 
       # Old web dynos still listed are already counted as previous; the

@@ -22,7 +22,7 @@ module Onair
       deployed_sha = snapshot.deployed&.sha
       mine = compute_mine(snapshot, git)
       commits = [deployed_sha, snapshot.pending&.sha, snapshot.release&.sha, mine&.sha]
-                .compact.uniq.to_h { |sha| [sha, git.commit_info(sha)] }
+        .compact.uniq.to_h { |sha| [sha, git.commit_info(sha)] }
       new(
         snapshot: snapshot,
         remote_head: remote_head,
@@ -100,6 +100,6 @@ module Onair
     end
 
     private_class_method :drop_superseded_pending, :compute_delta, :pinned?, :release_of_other_commit?,
-                         :compute_mine, :identity_match?, :live_rollout
+      :compute_mine, :identity_match?, :live_rollout
   end
 end

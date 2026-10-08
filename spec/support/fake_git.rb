@@ -5,7 +5,7 @@ class FakeGit
   attr_reader :fetch_count, :identity
 
   def initialize(commits: {}, identity: Onair::Git::Identity.new(name: nil, email: nil),
-                 remote_head: nil, ancestry: {}, first_parents: {})
+    remote_head: nil, ancestry: {}, first_parents: {})
     @commits = commits                # sha => CommitInfo
     @identity = identity
     @remote_head_sha = remote_head

@@ -4,18 +4,18 @@ require "open3"
 
 RSpec.describe Onair::Auth::GithubToken do
   it "prefers GH_TOKEN" do
-    expect(described_class.token(env: { "GH_TOKEN" => "from-gh", "GITHUB_TOKEN" => "from-github" }))
+    expect(described_class.token(env: {"GH_TOKEN" => "from-gh", "GITHUB_TOKEN" => "from-github"}))
       .to eq("from-gh")
   end
 
   it "falls back to GITHUB_TOKEN" do
-    expect(described_class.token(env: { "GITHUB_TOKEN" => "from-github" })).to eq("from-github")
+    expect(described_class.token(env: {"GITHUB_TOKEN" => "from-github"})).to eq("from-github")
   end
 
   it "ignores empty env values" do
     status = instance_double(Process::Status, success?: true)
     allow(Open3).to receive(:capture3).with("gh", "auth", "token").and_return(["cli-tok\n", "", status])
-    expect(described_class.token(env: { "GH_TOKEN" => "" })).to eq("cli-tok")
+    expect(described_class.token(env: {"GH_TOKEN" => ""})).to eq("cli-tok")
   end
 
   it "asks the gh CLI when env vars are unset" do

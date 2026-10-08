@@ -38,7 +38,7 @@ module Onair
 
       sha = JSON.parse(response.body).dig("object", "sha")
       sha&.match?(/\A\h{40}\z/) ? sha : nil
-    rescue StandardError
+    rescue
       nil
     end
     private_class_method :api_head

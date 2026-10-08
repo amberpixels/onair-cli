@@ -7,7 +7,7 @@ module Builders
   end
 
   def commit_info(subject: "Fix the thing (#123)", name: "Alice", email: "alice@example.com",
-                  at: Time.utc(2026, 6, 12, 10, 0, 0))
+    at: Time.utc(2026, 6, 12, 10, 0, 0))
     Onair::CommitInfo.new(subject: subject, author_name: name, author_email: email, committed_at: at)
   end
 
@@ -18,7 +18,7 @@ module Builders
   def snapshot(deployed:, pending: nil, release: nil, latest: :deployed, succeeded: nil, rollout: nil)
     latest = deployed&.sha if latest == :deployed
     Onair::Snapshot.new(deployed: deployed, pending: pending, release: release,
-                        latest_built_sha: latest, succeeded_shas: succeeded || [latest].compact, rollout: rollout)
+      latest_built_sha: latest, succeeded_shas: succeeded || [latest].compact, rollout: rollout)
   end
 
   def process_rollout(type: "web", total: 3, ready: total, waiting: {}, previous: 0)
@@ -30,7 +30,7 @@ module Builders
   end
 
   def in_flight_release(sha:, status: :pending, version: 1235, description: "Deploy bbbbbbb",
-                        at: Time.utc(2026, 6, 12, 11, 58, 0))
+    at: Time.utc(2026, 6, 12, 11, 58, 0))
     Onair::Release.new(sha: sha, version: version, description: description, status: status, started_at: at)
   end
 
