@@ -22,12 +22,20 @@ report = Onair::Report.new(
     release: Onair::Release.new(sha: release_sha, version: 1043, description: "Deploy f4a9c2b1",
                                 status: :pending, started_at: now - 42),
     latest_built_sha: release_sha,
-    succeeded_shas: [release_sha, deployed_sha, mine_sha]
+    succeeded_shas: [release_sha, deployed_sha, mine_sha],
+    rollout: nil
   ),
   remote_head: release_sha,
   delta: 1,
   pinned: false,
   mine: Onair::Mine.new(sha: mine_sha, had_own_build: true),
+  rollout: Onair::Rollout.new(
+    version: 1042, overlap_until: nil,
+    processes: [
+      Onair::ProcessRollout.new(type: "web", total: 3, up: 3, waiting: {}, previous: 0),
+      Onair::ProcessRollout.new(type: "worker", total: 2, up: 2, waiting: {}, previous: 0)
+    ]
+  ),
   commits: {
     deployed_sha => Onair::CommitInfo.new(subject: "Fix the thing (#1234)", author_name: "Alice",
                                           author_email: "alice@example.com", committed_at: now - 7300),
