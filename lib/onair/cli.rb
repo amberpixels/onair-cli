@@ -64,7 +64,8 @@ module Onair
       git = Git.new(fetch_allowed: config.fetch)
       adapter = Platform.build(config)
       repo = config.repo || git.origin_repo
-      report = Orchestrator.new(config: config, adapter: adapter, git: git, repo: repo).run
+      now = Time.now
+      report = Orchestrator.new(config: config, adapter: adapter, git: git, repo: repo, now: now).run
 
       if flags[:json]
         puts Renderer::Json.new(report: report, app: config.app, platform: config.platform,
@@ -73,7 +74,7 @@ module Onair
         tty = $stdout.tty?
         print Renderer::Tty.new(report: report, app: config.app, platform_label: adapter.display_name,
                                 branch: config.branch, repo: repo, task: config.task,
-                                color: tty && !no_color?, hyperlinks: tty, now: Time.now).render
+                                color: tty && !no_color?, hyperlinks: tty, now: now).render
       end
     end
 

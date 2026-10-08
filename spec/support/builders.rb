@@ -15,10 +15,18 @@ module Builders
     Onair::Deployed.new(sha: sha, version: version, description: description, deployed_at: at)
   end
 
-  def snapshot(deployed:, pending: nil, release: nil, latest: :deployed, succeeded: nil)
+  def snapshot(deployed:, pending: nil, release: nil, latest: :deployed, succeeded: nil, rollout: nil)
     latest = deployed&.sha if latest == :deployed
     Onair::Snapshot.new(deployed: deployed, pending: pending, release: release,
-                        latest_built_sha: latest, succeeded_shas: succeeded || [latest].compact)
+                        latest_built_sha: latest, succeeded_shas: succeeded || [latest].compact, rollout: rollout)
+  end
+
+  def process_rollout(type: "web", total: 3, ready: total, waiting: {}, previous: 0)
+    Onair::ProcessRollout.new(type: type, total: total, up: ready, waiting: waiting, previous: previous)
+  end
+
+  def dyno_rollout(processes: [process_rollout], version: 1234, overlap_until: nil)
+    Onair::Rollout.new(version: version, processes: processes, overlap_until: overlap_until)
   end
 
   def in_flight_release(sha:, status: :pending, version: 1235, description: "Deploy bbbbbbb",

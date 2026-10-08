@@ -10,9 +10,9 @@ RSpec.describe Onair::Renderer::Tty do
                         task: task).render
   end
 
-  def report(snapshot:, remote_head: nil, delta: nil, pinned: false, mine: nil, commits: {})
+  def report(snapshot:, remote_head: nil, delta: nil, pinned: false, mine: nil, commits: {}, rollout: nil)
     Onair::Report.new(snapshot: snapshot, remote_head: remote_head, delta: delta,
-                      pinned: pinned, mine: mine, commits: commits)
+                      pinned: pinned, mine: mine, commits: commits, rollout: rollout)
   end
 
   it "renders the full current-deploy report without color" do
@@ -186,6 +186,51 @@ RSpec.describe Onair::Renderer::Tty do
       rep = report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - seconds)),
                    commits: { deployed_sha => commit_info })
       expect(render(rep)).to include("(#{expected})")
+    end
+  end
+
+  describe "rollout" do
+    def rollout_render(rollout)
+      render(report(snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: now - 60)), delta: :current,
+                    commits: { deployed_sha => commit_info }, rollout: rollout))
+    end
+
+    it "shows progress per process type under the deployed row" do
+      rollout = dyno_rollout(processes: [
+                               process_rollout(total: 3, ready: 1, waiting: { "starting" => 2 }),
+                               process_rollout(type: "worker", total: 2, ready: 1, previous: 1)
+                             ])
+      expect(rollout_render(rollout)).to include(
+        "→ Fix the thing • ↗ #123\n  " \
+        "⟳ rolling out v1234: web 1/3, 2 starting · worker 1/2, 1 on older release\n"
+      )
+    end
+
+    it "shows the preboot handoff as an estimate" do
+      expect(rollout_render(dyno_rollout(overlap_until: now + 130)))
+        .to include("⟳ preboot: previous web dynos may still serve for ~3m (estimate)")
+      expect(rollout_render(dyno_rollout(overlap_until: now + 20)))
+        .to include("⟳ preboot: previous web dynos may still serve for ~20s (estimate)")
+    end
+
+    it "marks a finished rollout" do
+      rollout = dyno_rollout(processes: [process_rollout, process_rollout(type: "worker", total: 1)])
+      expect(rollout_render(rollout)).to include("✓ rolled out v1234: web 3/3 · worker 1/1\n")
+    end
+
+    it "dims a finished rollout and colors one in progress" do
+      done = render(report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)), rollout: dyno_rollout),
+                    color: true)
+      expect(done).to include("\e[2m✓ rolled out v1234: web 3/3\e[0m")
+
+      busy = render(report(snapshot: snapshot(deployed: deployed(sha: deployed_sha)),
+                           rollout: dyno_rollout(processes: [process_rollout(ready: 2, waiting: { "starting" => 1 })])),
+                    color: true)
+      expect(busy).to include("\e[1;33m⟳ rolling out v1234: web 2/3, 1 starting\e[0m")
+    end
+
+    it "shows no rollout line when the rollout is unknown" do
+      expect(rollout_render(nil)).not_to include("roll")
     end
   end
 end

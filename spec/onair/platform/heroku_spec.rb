@@ -36,8 +36,24 @@ RSpec.describe Onair::Platform::Heroku do
       .to_return(status: status, body: body.to_json)
   end
 
+  def dyno(type: "web", state: "up", version: 1234, updated_at: "2026-06-12T10:01:00Z")
+    { "type" => type, "state" => state, "release" => { "version" => version }, "updated_at" => updated_at }
+  end
+
+  def stub_dynos(body: [dyno], status: 200)
+    stub_request(:get, "https://api.heroku.com/apps/myapp/dynos")
+      .to_return(status: status, body: body.to_json)
+  end
+
+  def stub_preboot(enabled: false, status: 200)
+    stub_request(:get, "https://api.heroku.com/apps/myapp/features/preboot")
+      .to_return(status: status, body: { "name" => "preboot", "enabled" => enabled }.to_json)
+  end
+
   before do
     allow(Onair::Auth::Netrc).to receive(:token).with("api.heroku.com").and_return("tok-123")
+    stub_dynos
+    stub_preboot
   end
 
   it "resolves the deployed sha from the running release's slug" do
@@ -174,6 +190,95 @@ RSpec.describe Onair::Platform::Heroku do
       stub_builds(body: [])
 
       expect { adapter.snapshot }.to raise_error(Onair::Error, /no succeeded release among the last 10/)
+    end
+  end
+
+  describe "rollout" do
+    before do
+      stub_releases
+      stub_slug
+      stub_builds(body: [])
+    end
+
+    it "is complete when every dyno serves the running release" do
+      stub_dynos(body: [dyno, dyno, dyno(type: "worker")])
+
+      expect(adapter.snapshot.rollout).to eq(
+        Onair::Rollout.new(version: 1234, overlap_until: nil, processes: [
+                             Onair::ProcessRollout.new(type: "web", total: 2, up: 2, waiting: {}, previous: 0),
+                             Onair::ProcessRollout.new(type: "worker", total: 1, up: 1, waiting: {}, previous: 0)
+                           ])
+      )
+      expect(adapter.snapshot.rollout).to be_complete
+    end
+
+    it "counts dynos still starting, crashed, or on an older release" do
+      stub_dynos(body: [dyno(type: "worker"), dyno, dyno(state: "starting"), dyno(state: "crashed"),
+                        dyno(version: 1233)])
+
+      rollout = adapter.snapshot.rollout
+      expect(rollout.processes.map(&:type)).to eq(%w[web worker])
+      expect(rollout.processes.first).to eq(
+        Onair::ProcessRollout.new(type: "web", total: 4, up: 1, waiting: { "starting" => 1, "crashed" => 1 },
+                                  previous: 1)
+      )
+      expect(rollout).not_to be_complete
+    end
+
+    it "counts an idle eco dyno on the running release as rolled out" do
+      stub_dynos(body: [dyno(state: "idle")])
+
+      expect(adapter.snapshot.rollout).to be_complete
+    end
+
+    it "ignores one-off dynos" do
+      stub_dynos(body: [dyno, dyno(type: "run", state: "starting"), dyno(type: "scheduler", version: 1200),
+                        dyno(type: "release", state: "starting")])
+
+      expect(adapter.snapshot.rollout.processes.map(&:type)).to eq(["web"])
+    end
+
+    it "is nil when no formation dyno is listed" do
+      stub_dynos(body: [dyno(type: "run")])
+
+      expect(adapter.snapshot.rollout).to be_nil
+    end
+
+    it "estimates the preboot handoff from the newest web dyno once all web dynos are up" do
+      stub_preboot(enabled: true)
+      stub_dynos(body: [dyno(updated_at: "2026-06-12T11:58:00Z"), dyno(updated_at: "2026-06-12T11:59:00Z"),
+                        dyno(type: "worker", updated_at: "2026-06-12T11:59:30Z")])
+
+      expect(adapter.snapshot.rollout.overlap_until).to eq(Time.utc(2026, 6, 12, 12, 2, 0))
+    end
+
+    it "leaves the estimate out while old web dynos are still listed" do
+      stub_preboot(enabled: true)
+      stub_dynos(body: [dyno, dyno(version: 1233)])
+
+      expect(adapter.snapshot.rollout.overlap_until).to be_nil
+    end
+
+    it "leaves the estimate out without preboot" do
+      stub_dynos(body: [dyno(updated_at: "2026-06-12T11:59:00Z")])
+
+      expect(adapter.snapshot.rollout.overlap_until).to be_nil
+    end
+
+    it "drops only the estimate when the preboot lookup fails" do
+      stub_preboot(status: 500)
+
+      rollout = adapter.snapshot.rollout
+      expect(rollout.overlap_until).to be_nil
+      expect(rollout.processes.first.total).to eq(1)
+    end
+
+    it "drops the rollout and keeps the rest of the report when the dynos call fails" do
+      stub_dynos(status: 500)
+
+      snap = adapter.snapshot
+      expect(snap.rollout).to be_nil
+      expect(snap.deployed.sha).to eq(deployed_sha)
     end
   end
 

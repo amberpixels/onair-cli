@@ -10,15 +10,24 @@ module Onair
       HOST = "api.heroku.com"
       RELEASE_WINDOW = 10
       IN_FLIGHT_STATUSES = %w[pending failed].freeze
+      ONE_OFF_TYPES = %w[run scheduler release].freeze
+      # An eco dyno asleep on the running release boots that release on wake.
+      SERVING_STATES = %w[up idle].freeze
+      # With preboot, Heroku keeps routing to the previous web dynos for about
+      # three minutes after the new ones come up.
+      PREBOOT_HANDOFF = 180
 
       def snapshot
         token = resolve_token
         releases_thread = quiet_thread { releases(token) }
         builds_thread = quiet_thread { builds(token) }
+        dynos_thread = quiet_thread { dynos(token) }
         deployed, release = releases_thread.value
         pending, succeeded_shas = builds_thread.value
+        dyno_rows, preboot = dynos_thread.value
         Snapshot.new(deployed: deployed, pending: pending, release: release,
-                     latest_built_sha: succeeded_shas.first, succeeded_shas: succeeded_shas)
+                     latest_built_sha: succeeded_shas.first, succeeded_shas: succeeded_shas,
+                     rollout: rollout(dyno_rows, preboot, deployed.version))
       end
 
       private
@@ -100,6 +109,56 @@ module Onair
         [pending, succeeded]
       rescue Error
         [nil, []]
+      end
+
+      # A failed dynos call drops the rollout and nothing else; a failed
+      # preboot lookup only drops the handoff estimate.
+      def dynos(token)
+        with_http do |http|
+          rows = get(http, token, "/apps/#{app}/dynos")
+          [rows, preboot?(http, token)]
+        end
+      rescue Error
+        [nil, false]
+      end
+
+      def preboot?(http, token)
+        get(http, token, "/apps/#{app}/features/preboot")["enabled"] == true
+      rescue Error
+        false
+      end
+
+      def rollout(rows, preboot, version)
+        return nil if rows.nil? || version.nil?
+
+        formation = rows.reject { |dyno| ONE_OFF_TYPES.include?(dyno["type"]) }
+        return nil if formation.empty?
+
+        processes = formation.group_by { |dyno| dyno["type"] }
+                             .sort_by { |type, _| [type == "web" ? 0 : 1, type] }
+                             .map { |type, dynos| process_rollout(type, dynos, version) }
+        Rollout.new(version: version, processes: processes,
+                    overlap_until: preboot ? preboot_handoff(formation, version) : nil)
+      end
+
+      def process_rollout(type, dynos, version)
+        current, previous = dynos.partition { |dyno| dyno.dig("release", "version") == version }
+        waiting = current.map { |dyno| dyno["state"] }.reject { |state| SERVING_STATES.include?(state) }.tally
+        ProcessRollout.new(type: type, total: dynos.size, up: current.size - waiting.values.sum,
+                           waiting: waiting, previous: previous.size)
+      end
+
+      # Old web dynos still listed are already counted as previous; the
+      # estimate covers only the handoff the dynos list does not show.
+      def preboot_handoff(formation, version)
+        web = formation.select { |dyno| dyno["type"] == "web" }
+        return nil if web.empty?
+        return nil unless web.all? do |dyno|
+          dyno.dig("release", "version") == version && SERVING_STATES.include?(dyno["state"])
+        end
+
+        last_up = web.filter_map { |dyno| parse_time(dyno["updated_at"]) }.max
+        last_up && (last_up + PREBOOT_HANDOFF)
       end
 
       # One connection per thread — the dependent releases → slug pair must

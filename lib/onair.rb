@@ -18,10 +18,27 @@ module Onair
   # release phase is still running (status :pending) or it failed (:failed).
   Release = Data.define(:sha, :version, :description, :status, :started_at)
 
+  # Dynos of one process type against the running release. `up` counts dynos
+  # on the running version that serve (or idle until woken); `waiting` counts
+  # the rest of them by state; `previous` counts dynos on an older release.
+  ProcessRollout = Data.define(:type, :total, :up, :waiting, :previous) do
+    def complete?
+      up == total
+    end
+  end
+
+  # How far the running release has reached its dynos. `overlap_until` is an
+  # estimate of when the previous release stops serving traffic, or nil.
+  Rollout = Data.define(:version, :processes, :overlap_until) do
+    def complete?
+      processes.all?(&:complete?) && overlap_until.nil?
+    end
+  end
+
   # What a platform adapter returns. `latest_built_sha` is the newest
   # successfully built sha (rollback detection); `succeeded_shas` lists all
   # recent succeeded build shas, newest first ("yours had its own deploy").
-  Snapshot = Data.define(:deployed, :pending, :release, :latest_built_sha, :succeeded_shas)
+  Snapshot = Data.define(:deployed, :pending, :release, :latest_built_sha, :succeeded_shas, :rollout)
 
   Mine = Data.define(:sha, :had_own_build)
 end

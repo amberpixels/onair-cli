@@ -48,4 +48,16 @@ RSpec.describe Onair::Orchestrator do
     orchestrator = described_class.new(config: config, adapter: failing, git: FakeGit.new)
     expect { orchestrator.run }.to raise_error(Onair::Error, "boom")
   end
+
+  it "judges the rollout's handoff estimate against the given clock" do
+    now = Time.utc(2026, 6, 12, 12, 0, 0)
+    snap = snapshot(deployed: deployed(sha: sha_of("a")), rollout: dyno_rollout(overlap_until: now + 60))
+    rolling = Class.new { define_method(:snapshot) { snap } }.new
+    git = FakeGit.new(commits: { sha_of("a") => commit_info }, remote_head: sha_of("a"))
+
+    early = described_class.new(config: config, adapter: rolling, git: git, now: now).run
+    late = described_class.new(config: config, adapter: rolling, git: git, now: now + 61).run
+    expect(early.rollout).not_to be_complete
+    expect(late.rollout).to be_complete
+  end
 end

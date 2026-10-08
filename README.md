@@ -72,6 +72,11 @@ the API is a faster transport, never a cache.
   author, and a delta against `origin/main`: `★ current` or
   `↓ N commits behind`. If the relationship is unknown (diverged history,
   commits unavailable), no marker is shown - silence over speculation.
+- **Rollout** - under the Deployed row, how many dynos of each process type
+  run that release: `⟳ rolling out v1234: web 1/3, 2 starting` while dynos
+  restart, `✓ rolled out` once every dyno is up on it. With preboot on, the
+  previous web dynos keep serving for about three minutes after the new ones
+  are up; that window shows as an estimate.
 - **Pending** - an in-flight build that's about to replace the deploy.
 - **Releasing** - a newer release whose release phase (e.g. migrations) is
   still running; production still serves the Deployed row until it finishes.
@@ -130,6 +135,13 @@ additively:
   },
   "pending": null,
   "release": null,
+  "rollout": {
+    "version": 1234, "complete": true,
+    "processes": [
+      { "type": "web", "up": 3, "total": 3, "waiting": {}, "previous": 0 }
+    ],
+    "overlap_until": null
+  },
   "delta": { "status": "current", "behind_by": 0 },
   "pinned": null,
   "yours": null
@@ -143,6 +155,12 @@ additively:
   "subject", "author" }` when a release newer than the running one is not
   live; `status` is `"pending"` (release phase running) or `"failed"`. While
   it carries a different sha, `delta.status` is never `"current"`.
+- `rollout`: dynos per process type against the running release. `up`
+  counts dynos serving it, `waiting` counts the rest of its dynos by state
+  (`starting`, `crashed`, ...), `previous` counts dynos on an older release.
+  `overlap_until` is an estimated end of the preboot handoff while it lasts,
+  otherwise `null`. `complete` is true once every dyno serves the running
+  release and no handoff remains. `null` when the dynos can't be read.
 - `pinned`: `{ "version", "description", "latest_built_sha" }` when a newer
   build succeeded but is not running.
 - `yours`: `{ "sha", "had_own_build", "subject", "author" }` when your commit

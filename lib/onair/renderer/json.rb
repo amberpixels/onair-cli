@@ -31,6 +31,7 @@ module Onair
           deployed: deployed_payload,
           pending: pending_payload,
           release: release_payload,
+          rollout: rollout_payload,
           delta: delta_payload,
           pinned: pinned_payload,
           yours: yours_payload
@@ -73,6 +74,21 @@ module Onair
           status: release.status.to_s,
           started_at: iso(release.started_at)
         }.merge(commit_fields(release.sha))
+      end
+
+      def rollout_payload
+        rollout = @report.rollout
+        return nil if rollout.nil?
+
+        {
+          version: rollout.version,
+          complete: rollout.complete?,
+          processes: rollout.processes.map do |process|
+            { type: process.type, up: process.up, total: process.total,
+              waiting: process.waiting, previous: process.previous }
+          end,
+          overlap_until: iso(rollout.overlap_until)
+        }
       end
 
       def delta_payload
