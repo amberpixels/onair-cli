@@ -23,7 +23,9 @@ module Onair
     # Adapter contract: implement #snapshot returning a Snapshot.
     #
     #   deployed:         the release CURRENTLY RUNNING (nil sha only if
-    #                     truly unresolvable)
+    #                     truly unresolvable), or nil when the platform
+    #                     records no successful deploy; renderers then show
+    #                     one line in its place
     #   pending:          newest in-flight build, or nil
     #   release:          newest release above the running one that is not
     #                     running (release phase pending or failed), or nil

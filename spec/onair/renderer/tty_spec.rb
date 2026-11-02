@@ -212,7 +212,19 @@ RSpec.describe Onair::Renderer::Tty do
 
     it "renders one line when nothing is deployed" do
       expect(render(report(snapshot: snapshot(deployed: nil))))
-        .to eq("\n  Heroku acme-prod\n\n  No deployments recorded yet.\n\n")
+        .to eq("\n  Heroku acme-prod\n\n  No successful deploy recorded.\n\n")
+    end
+
+    it "renders pending and failed rows above a missing deploy" do
+      ok = sha_of("b")
+      bad = sha_of("c")
+      snap = snapshot(deployed: nil, latest: nil,
+        pending: Onair::Pending.new(sha: ok, started_at: now - 60),
+        release: in_flight_release(sha: bad, status: :failed, version: nil, description: "deployment 2", at: now - 120))
+      out = render(report(snapshot: snap, commits: {ok => commit_info, bad => commit_info(name: "Bob")}))
+      expect(out).to include("  Pending:    bbbbbbbbb  (1m ago) by Alice\n")
+      expect(out).to include("  Failed:     ccccccccc  (2m ago) by Bob  ✗ deploy failed (deployment 2)\n")
+      expect(out).to end_with("  No successful deploy recorded.\n\n")
     end
 
     it "renders the pinned line without a version" do

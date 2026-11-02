@@ -96,7 +96,7 @@ module Onair
 
       def deployed_lines
         deployed = snapshot.deployed
-        return ["  #{paint("No deployments recorded yet.", :yellow)}"] if deployed.nil?
+        return ["  #{paint("No successful deploy recorded.", :yellow)}"] if deployed.nil?
 
         if deployed.sha
           lines = row_lines("Deployed:", :green, deployed.sha, age(deployed.deployed_at), extra: delta_text)

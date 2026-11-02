@@ -148,6 +148,10 @@ the newest status of each through the GitHub API, with the token from
   `in_progress`, with its commit.
 - **Failed** is a newer deployment whose status is `failure` or `error`.
 - A deployment with no status yet is ignored.
+- With no successful deployment among the last 10, the report says so in one
+  line, under any Pending or Failed row.
+- If the status of a deployment newer than the deployed one cannot be read,
+  the report fails rather than show an older commit as running.
 
 **This adapter reports what CI recorded, not what the host runs.** A deploy
 that bypassed CI stays invisible until the next recorded one, and a CI job
@@ -231,7 +235,7 @@ additively:
 - `delta.status` is `"current"`, `"behind"`, or `"unknown"`.
 - `environment` is the GitHub Deployments environment read, `null` on other
   platforms. With `platform: github_deployments`, `app` is `null`, and
-  `deployed` is `null` while the environment has no deployments.
+  `deployed` is `null` when no deployment among the last 10 succeeded.
 - `pending`: `{ "sha", "build_id", "started_at", "subject", "author" }` when
   a build is in flight. On Dokku `sha` is `null` and `build_id` names the
   build; on Heroku `build_id` is `null`.

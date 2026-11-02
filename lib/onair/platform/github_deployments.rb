@@ -32,19 +32,14 @@ module Onair
       def snapshot
         token = resolve_token
         rows = with_statuses(token, deployments(token))
-        if rows.empty?
-          return Snapshot.new(deployed: nil, pending: nil, release: nil, latest_built_sha: nil,
-            succeeded_shas: [], rollout: nil)
-        end
+        # A deployment whose status could not be read may be the one running,
+        # so any such row above the newest success fails the report.
+        index = rows.index { |row| row[:error] || row[:state] == SUCCESS }
+        raise rows[index][:error] if index && rows[index][:error]
 
-        index = rows.index { |row| row[:state] == SUCCESS }
-        if index.nil?
-          raise Error, "no successful deployment among the last #{WINDOW} in #{environment} for #{@repo}"
-        end
-
-        newer = rows.first(index)
+        newer = index ? rows.first(index) : rows
         succeeded = rows.select { |row| SUCCEEDED_STATES.include?(row[:state]) }.map { |row| row[:sha] }.uniq
-        Snapshot.new(deployed: deployed(rows[index]), pending: pending(newer), release: failed(newer),
+        Snapshot.new(deployed: index && deployed(rows[index]), pending: pending(newer), release: failed(newer),
           latest_built_sha: succeeded.first, succeeded_shas: succeeded, rollout: nil)
       end
 
@@ -75,17 +70,23 @@ module Onair
       end
 
       # Pairs each deployment with its newest status, newest deployment first.
-      # A failed statuses call drops that deployment, not the report, and a
-      # deployment with no status yet says nothing, so it is skipped too.
+      # A failed statuses call keeps its row with the error, for #snapshot to
+      # judge; a deployment with no status yet says nothing, so it is skipped.
       def with_statuses(token, deployments)
         threads = deployments.map do |deployment|
-          quiet_thread { optional { newest_status(token, deployment["id"]) } }
+          quiet_thread do
+            newest_status(token, deployment["id"])
+          rescue Error => e
+            e
+          end
         end
         deployments.zip(threads.map(&:value)).filter_map do |deployment, status|
           next if status.nil?
 
-          {id: deployment["id"], sha: deployment["sha"], created_at: parse_time(deployment["created_at"]),
-           state: status["state"], status_at: parse_time(status["created_at"])}
+          row = {id: deployment["id"], sha: deployment["sha"], created_at: parse_time(deployment["created_at"])}
+          next row.merge(error: status) if status.is_a?(Error)
+
+          row.merge(state: status["state"], status_at: parse_time(status["created_at"]))
         end.sort_by { |row| row[:created_at] || Time.at(0) }.reverse
       end
 
@@ -107,12 +108,6 @@ module Onair
         row = newer.find { |candidate| FAILED_STATES.include?(candidate[:state]) }
         row && Release.new(sha: row[:sha], version: nil, description: "deployment #{row[:id]}",
           status: :failed, started_at: row[:status_at])
-      end
-
-      def optional
-        yield
-      rescue Error
-        nil
       end
 
       def with_http(&)

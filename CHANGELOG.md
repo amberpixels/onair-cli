@@ -9,7 +9,7 @@
   in-flight one is Pending with its commit, and a newer failed one is Failed.
   It reports what CI recorded, not what the host runs.
 - `app:` is required only by the platforms that use it. `--json` gains an
-  `environment` field, and `deployed` is `null` when nothing is deployed yet.
+  `environment` field, and `deployed` is `null` when nothing successful is deployed yet.
 
 ## [0.4.0] - 2026-11-02
 

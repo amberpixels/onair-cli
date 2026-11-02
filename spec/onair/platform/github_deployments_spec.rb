@@ -75,13 +75,20 @@ RSpec.describe Onair::Platform::GithubDeployments do
     expect(snap.deployed.sha).to eq(sha_of("b"))
   end
 
-  it "drops a deployment whose statuses call fails, not the report" do
+  it "fails when a deployment above the newest success has an unreadable status" do
     stub_deployments([deployment(3, sha_of("c"), "2026-06-12T11:58:00Z"), deployment(2, sha_of("b"), "2026-06-12T11:00:00Z")])
-    stub_status(3, "failure", status: 500)
+    stub_status(3, "success", status: 500)
     stub_status(2, "success")
+    expect { adapter.snapshot }.to raise_error(Onair::Error, /returned 500/)
+  end
+
+  it "drops an older deployment whose statuses call fails" do
+    stub_deployments([deployment(2, sha_of("b"), "2026-06-12T11:00:00Z"), deployment(1, sha_of("a"), "2026-06-12T09:00:00Z")])
+    stub_status(2, "success")
+    stub_status(1, "inactive", status: 500)
     snap = adapter.snapshot
-    expect(snap.release).to be_nil
     expect(snap.deployed.sha).to eq(sha_of("b"))
+    expect(snap.succeeded_shas).to eq([sha_of("b")])
   end
 
   it "returns no deploy when the environment has no deployments" do
@@ -90,11 +97,28 @@ RSpec.describe Onair::Platform::GithubDeployments do
       latest_built_sha: nil, succeeded_shas: [], rollout: nil))
   end
 
-  it "raises when no deployment in the window succeeded" do
+  it "shows a first deployment in flight with nothing deployed" do
     stub_deployments([deployment(1, sha_of("a"), "2026-06-12T09:00:00Z")])
-    stub_status(1, "failure")
-    expect { adapter.snapshot }
-      .to raise_error(Onair::Error, "no successful deployment among the last 10 in production for acme/widgets")
+    stub_status(1, "in_progress")
+    snap = adapter.snapshot
+    expect(snap.deployed).to be_nil
+    expect(snap.pending).to eq(Onair::Pending.new(sha: sha_of("a"), started_at: Time.utc(2026, 6, 12, 9, 0, 0)))
+  end
+
+  it "shows the newest failure when no deployment in the window succeeded" do
+    stub_deployments([deployment(2, sha_of("b"), "2026-06-12T11:00:00Z"), deployment(1, sha_of("a"), "2026-06-12T09:00:00Z")])
+    stub_status(2, "failure", "2026-06-12T11:05:00Z")
+    stub_status(1, "error")
+    snap = adapter.snapshot
+    expect(snap.deployed).to be_nil
+    expect(snap.release.sha).to eq(sha_of("b"))
+    expect(snap.succeeded_shas).to eq([])
+  end
+
+  it "fails when nothing succeeded and a status is unreadable" do
+    stub_deployments([deployment(1, sha_of("a"), "2026-06-12T09:00:00Z")])
+    stub_status(1, "success", status: 503)
+    expect { adapter.snapshot }.to raise_error(Onair::Error, /returned 503/)
   end
 
   context "with an environment that needs encoding" do
