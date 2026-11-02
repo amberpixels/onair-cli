@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- Dokku: `platform: dokku` with a `host:` reads the running commit from the
+  last `git push` over SSH. A running build shows as `Pending` and a build
+  that failed after the last success as `Failed`, both without a commit. The
+  rollout line counts containers per process type, and the window in which
+  the previous containers keep serving shows as an estimate.
+- Rows drop `v<version>` when the platform numbers no releases. `--json`
+  carries `null` versions and shas there, and `pending` gains `build_id`.
+
 ## [0.3.0] - 2026-10-08
 
 - Heroku: a rollout line under Deployed counts the dynos of each process type

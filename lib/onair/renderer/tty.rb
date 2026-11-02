@@ -49,6 +49,12 @@ module Onair
         pending = snapshot.pending
         return [] if pending.nil?
 
+        if pending.sha.nil?
+          started = pending.started_at && "started #{age(pending.started_at)}"
+          return commitless_row("Pending:", :yellow, "build #{pending.build_id}", started,
+            paint("⟳ deploying", :yellow)) + [""]
+        end
+
         row_lines("Pending:", :yellow, pending.sha, age(pending.started_at)) + [""]
       end
 
@@ -57,15 +63,22 @@ module Onair
       def release_lines
         release = snapshot.release
         return [] if release.nil?
+        return build_failed_lines(release) if release.sha.nil?
 
-        detail = "v#{release.version}"
-        detail = "#{detail}: #{release.description}" if release.sha == snapshot.deployed&.sha
+        detail = version_label(release.version)
+        detail = [detail, release.description].compact.join(": ") if release.sha == snapshot.deployed&.sha
         label, color, note = if release.status == :failed
           ["Failed:", :red, "✗ release phase failed (#{detail})"]
         else
           ["Releasing:", :yellow, "⟳ release phase (#{detail})"]
         end
         row_lines(label, color, release.sha, age(release.started_at), extra: paint(note, color)) + [""]
+      end
+
+      # A failed build whose commit the platform does not record.
+      def build_failed_lines(release)
+        commitless_row("Failed:", :red, release.description, age(release.started_at),
+          paint("✗ build failed", :red)) + [""]
       end
 
       def deployed_lines
@@ -77,8 +90,8 @@ module Onair
           lines.concat(yours_lines)
           lines
         else
-          ["  #{paint("Could not resolve the running commit for v#{deployed&.version} " \
-                      "(#{deployed&.description}).", :yellow)}"]
+          subject = ["the running commit", version_label(deployed&.version)].compact.join(" for ")
+          ["  #{paint("Could not resolve #{subject} (#{deployed&.description}).", :yellow)}"]
         end
       end
 
@@ -86,13 +99,14 @@ module Onair
       # traffic to the previous release, so that window gets its own line.
       def rollout_line
         rollout = @report.rollout
+        target = [version_label(rollout.version)].compact.map { |label| " #{label}" }.join
         text, color = if rollout.complete?
-          ["✓ rolled out v#{rollout.version}: #{process_counts(rollout)}", :dim]
+          ["✓ rolled out#{target}: #{process_counts(rollout)}", :dim]
         elsif rollout.processes.all?(&:complete?)
-          ["⟳ preboot: previous web dynos may still serve for " \
+          ["⟳ #{rollout.overlap_note || "previous release may still serve"} for " \
            "~#{remaining(rollout.overlap_until)} (estimate)", :yellow]
         else
-          ["⟳ rolling out v#{rollout.version}: #{process_counts(rollout)}", :yellow]
+          ["⟳ rolling out#{target}: #{process_counts(rollout)}", :yellow]
         end
         "  #{paint(text, color)}"
       end
@@ -131,6 +145,17 @@ module Onair
         [first, "  #{paint("→", :dim)} #{linkify(subject, info ? sha : nil)}"]
       end
 
+      # A row for a build with no commit: its name stands where the sha would,
+      # and there is no subject line to show.
+      def commitless_row(label, color_key, name, age, extra)
+        age_blurb = age ? "  #{paint("(#{age})", :dim)}" : ""
+        ["  #{paint(label.ljust(LABEL_WIDTH), color_key)}  #{paint(name, :bold)}#{age_blurb}  #{extra}"]
+      end
+
+      def version_label(version)
+        version && "v#{version}"
+      end
+
       def delta_text
         case @report.delta
         when :current
@@ -143,7 +168,8 @@ module Onair
 
       def pinned_line
         deployed = snapshot.deployed
-        "  #{paint("⏸ v#{deployed.version} (#{deployed.description}) - newer build " \
+        running = [version_label(deployed.version), "(#{deployed.description})"].compact.join(" ")
+        "  #{paint("⏸ #{running} - newer build " \
                    "#{snapshot.latest_built_sha[0, 9]} succeeded but is not running", :yellow)}"
       end
 

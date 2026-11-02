@@ -25,8 +25,10 @@ module Builders
     Onair::ProcessRollout.new(type: type, total: total, up: ready, waiting: waiting, previous: previous)
   end
 
-  def dyno_rollout(processes: [process_rollout], version: 1234, overlap_until: nil)
-    Onair::Rollout.new(version: version, processes: processes, overlap_until: overlap_until)
+  def dyno_rollout(processes: [process_rollout], version: 1234, overlap_until: nil,
+    overlap_note: Onair::Platform::Heroku::PREBOOT_NOTE)
+    Onair::Rollout.new(version: version, processes: processes, overlap_until: overlap_until,
+      overlap_note: overlap_note)
   end
 
   def in_flight_release(sha:, status: :pending, version: 1235, description: "Deploy bbbbbbb",

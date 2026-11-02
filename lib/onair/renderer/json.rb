@@ -60,7 +60,8 @@ module Onair
         pending = snapshot.pending
         return nil if pending.nil?
 
-        {sha: pending.sha, started_at: iso(pending.started_at)}.merge(commit_fields(pending.sha))
+        {sha: pending.sha, build_id: pending.build_id, started_at: iso(pending.started_at)}
+          .merge(commit_fields(pending.sha))
       end
 
       def release_payload

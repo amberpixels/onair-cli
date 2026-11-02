@@ -42,8 +42,9 @@ case.
 gem install onair-cli
 ```
 
-Requires Ruby >= 3.2. Auth reuses the Heroku CLI's token from `~/.netrc`
-(written by `heroku login`), falling back to `heroku auth:token`.
+Requires Ruby >= 3.2. On Heroku, auth reuses the Heroku CLI's token from
+`~/.netrc` (written by `heroku login`), falling back to `heroku auth:token`.
+On Dokku, it reuses your SSH setup (see [Dokku](#dokku)).
 
 ## Usage
 
@@ -76,7 +77,8 @@ the API is a faster transport, never a cache.
   run that release: `⟳ rolling out v1234: web 1/3, 2 starting` while dynos
   restart, `✓ rolled out` once every dyno is up on it. With preboot on, the
   previous web dynos keep serving for about three minutes after the new ones
-  are up; that window shows as an estimate.
+  are up; that window shows as an estimate. On Dokku it counts containers,
+  and the estimate is the app's wait-to-retire after the newest build.
 - **Pending** - an in-flight build that's about to replace the deploy.
 - **Releasing** - a newer release whose release phase (e.g. migrations) is
   still running; production still serves the Deployed row until it finishes.
@@ -99,7 +101,27 @@ branch: main         # comparison branch; default: main
 ```
 
 Resolution order: CLI flags → env vars (`HEROKU_APP`, `GITHUB_REPO`) →
-`.onair.yml`.
+`.onair.yml`. `HEROKU_APP` applies only with `platform: heroku`.
+
+### Dokku
+
+```yaml
+platform: dokku
+host: my-dokku   # any SSH destination: dokku@host, or a ~/.ssh/config alias
+app: myapp
+```
+
+onair runs `ssh -o BatchMode=yes <host> <command> <app> --format json` for
+Dokku's report commands, so it needs Dokku 0.38 or newer and an `ssh` client.
+The host must log in as Dokku's `dokku` user, directly or through an alias
+with `User dokku`. Keys, addresses and users come from your SSH config;
+`BatchMode` never prompts, so the key must be loadable without a passphrase
+prompt (`ssh-add`).
+
+The deployed commit is the one the last `git push` deployed. An app deployed
+another way (`git:from-image`, `git:sync`) shows the deploy source instead
+of a commit. Dokku builds record no commit, so `Pending` and `Failed` name
+the build, and pinned detection stays silent.
 
 ### Task links (optional)
 
@@ -149,8 +171,11 @@ additively:
 ```
 
 - `delta.status` is `"current"`, `"behind"`, or `"unknown"`.
-- `pending`: `{ "sha", "started_at", "subject", "author" }` when a build is
-  in flight.
+- `pending`: `{ "sha", "build_id", "started_at", "subject", "author" }` when
+  a build is in flight. On Dokku `sha` is `null` and `build_id` names the
+  build; on Heroku `build_id` is `null`.
+- `version` is `null` on platforms that number no releases (Dokku), and a
+  Dokku `release` is a failed build with a `null` sha.
 - `release`: `{ "sha", "version", "description", "status", "started_at",
   "subject", "author" }` when a release newer than the running one is not
   live; `status` is `"pending"` (release phase running) or `"failed"`. While

@@ -73,8 +73,11 @@ module Onair
       !sha.nil? && !latest.nil? && latest != sha && snapshot.pending.nil? && !release_of_other_commit?(snapshot)
     end
 
+    # A release with no known commit (a failed build on a platform whose
+    # builds carry none) says nothing about commits, so it never counts.
     def self.release_of_other_commit?(snapshot)
-      !snapshot.release.nil? && snapshot.release.sha != snapshot.deployed&.sha
+      sha = snapshot.release&.sha
+      !sha.nil? && sha != snapshot.deployed&.sha
     end
 
     # "Did my merge just ship?" — deliberately a 2-commit first-parent window

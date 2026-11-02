@@ -8,10 +8,13 @@ module Onair
   class Config
     FILENAME = ".onair.yml"
 
-    attr_reader :platform, :app, :repo, :branch, :fetch, :task
+    attr_reader :platform, :app, :repo, :branch, :fetch, :task, :host
 
-    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil)
+    # `host` is the SSH destination for SSH-driven platforms (Dokku); nil
+    # elsewhere, and only the adapter that needs it checks it.
+    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil, host: nil)
       @platform = platform
+      @host = host
       @app = app
       @repo = repo
       @branch = branch
@@ -21,16 +24,19 @@ module Onair
 
     def self.resolve(flags = {}, env: ENV, dir: Dir.pwd)
       file = find_file(dir) || {}
-      app = flags[:app] || env["HEROKU_APP"] || file["app"]
+      platform = file["platform"] || "heroku"
+      # HEROKU_APP names a Heroku app, so it must not redirect another platform.
+      app = flags[:app] || ((platform == "heroku") ? env["HEROKU_APP"] : nil) || file["app"]
       raise Error, "no app configured - pass --app NAME, set HEROKU_APP, or run `onair init`" if app.nil?
 
       new(
-        platform: file["platform"] || "heroku",
+        platform: platform,
         app: app,
         repo: env["GITHUB_REPO"] || file["repo"],
         branch: file["branch"] || "main",
         fetch: !flags[:no_fetch],
-        task: TaskLink.from_config(file["task"])
+        task: TaskLink.from_config(file["task"]),
+        host: file["host"]
       )
     end
 
