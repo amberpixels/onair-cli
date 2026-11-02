@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-02
+
 - Dokku: `platform: dokku` with a `host:` reads the running commit from the
   last `git push` over SSH. A running build shows as `Pending` and a build
   that failed after the last success as `Failed`, both without a commit. The
