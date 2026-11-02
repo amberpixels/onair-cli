@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-02
+
 - GitHub Deployments: `platform: github_deployments` reads one environment's
   deployments (`environment:`, default `production`) through the GitHub API
   with the `gh` token, so anyone who can read the repo sees what is deployed
