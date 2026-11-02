@@ -9,14 +9,14 @@ module Onair
         @registry[name] = klass
       end
 
-      def build(config)
+      def build(config, repo: nil)
         klass = @registry[config.platform]
         if klass.nil?
           raise Error,
             "unknown platform #{config.platform.inspect} (available: #{@registry.keys.join(", ")})"
         end
 
-        klass.new(config)
+        klass.new(config, repo: repo)
       end
     end
 
@@ -40,8 +40,12 @@ module Onair
     # (delta, pinned, mine, rendering) is platform-agnostic and must not
     # reference any specific platform.
     class Base
-      def initialize(config)
+      NO_APP = "no app configured - pass --app NAME, set HEROKU_APP, or run `onair init`"
+
+      # `repo` is the GitHub repo (config or origin remote), or nil.
+      def initialize(config, repo: nil)
         @config = config
+        @repo = repo
       end
 
       def snapshot
@@ -50,6 +54,16 @@ module Onair
 
       def display_name
         self.class.name.split("::").last
+      end
+
+      # What the report's header names next to the platform.
+      def target_label
+        @config.app
+      end
+
+      # The deploy environment the adapter reads, for platforms that have one.
+      def environment
+        nil
       end
 
       private

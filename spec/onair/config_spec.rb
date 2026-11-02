@@ -71,8 +71,7 @@ RSpec.describe Onair::Config do
     nested = File.join(repo, "sub")
     FileUtils.mkdir_p(File.join(repo, ".git"))
     FileUtils.mkdir_p(nested)
-    expect { described_class.resolve({}, env: {}, dir: nested) }
-      .to raise_error(Onair::Error, /onair init/)
+    expect(described_class.resolve({}, env: {}, dir: nested).app).to be_nil
   end
 
   it "defaults platform to heroku and branch to main" do
@@ -86,9 +85,19 @@ RSpec.describe Onair::Config do
     expect(config.fetch).to be(false)
   end
 
-  it "errors with an actionable hint when no app is configured" do
-    expect { described_class.resolve({}, env: {}, dir: @dir) }
-      .to raise_error(Onair::Error, /--app NAME, set HEROKU_APP, or run `onair init`/)
+  it "leaves the app check to the adapters that need one" do
+    write_config("platform" => "github_deployments", "app" => nil)
+    expect(described_class.resolve({}, env: {}, dir: @dir).app).to be_nil
+  end
+
+  it "defaults the environment to production" do
+    write_config
+    expect(described_class.resolve({}, env: {}, dir: @dir).environment).to eq("production")
+  end
+
+  it "reads the environment from the file" do
+    write_config("environment" => "staging")
+    expect(described_class.resolve({}, env: {}, dir: @dir).environment).to eq("staging")
   end
 
   describe "task section" do

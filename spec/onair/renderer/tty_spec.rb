@@ -202,6 +202,19 @@ RSpec.describe Onair::Renderer::Tty do
         .to include("Could not resolve the running commit (deploy source: git:from-image).\n")
     end
 
+    it "renders a failed deploy with a commit but no version" do
+      bad = sha_of("b")
+      snap = snapshot(deployed: dokku_deployed, latest: nil,
+        release: in_flight_release(sha: bad, status: :failed, version: nil, description: "deployment 41", at: now - 180))
+      expect(render(report(snapshot: snap, commits: {deployed_sha => commit_info, bad => commit_info(name: "Bob")})))
+        .to include("  Failed:     bbbbbbbbb  (3m ago) by Bob  ✗ deploy failed (deployment 41)\n")
+    end
+
+    it "renders one line when nothing is deployed" do
+      expect(render(report(snapshot: snapshot(deployed: nil))))
+        .to eq("\n  Heroku acme-prod\n\n  No deployments recorded yet.\n\n")
+    end
+
     it "renders the pinned line without a version" do
       snap = snapshot(deployed: dokku_deployed, latest: sha_of("c"))
       expect(render(report(snapshot: snap, pinned: true, commits: {deployed_sha => commit_info})))

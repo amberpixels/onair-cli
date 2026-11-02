@@ -62,17 +62,17 @@ module Onair
     def status(flags)
       config = Config.resolve(flags)
       git = Git.new(fetch_allowed: config.fetch)
-      adapter = Platform.build(config)
       repo = config.repo || git.origin_repo
+      adapter = Platform.build(config, repo: repo)
       now = Time.now
       report = Orchestrator.new(config: config, adapter: adapter, git: git, repo: repo, now: now).run
 
       if flags[:json]
         puts Renderer::Json.new(report: report, app: config.app, platform: config.platform,
-          branch: config.branch, repo: repo, task: config.task).render
+          branch: config.branch, repo: repo, environment: adapter.environment, task: config.task).render
       else
         tty = $stdout.tty?
-        print Renderer::Tty.new(report: report, app: config.app, platform_label: adapter.display_name,
+        print Renderer::Tty.new(report: report, app: adapter.target_label, platform_label: adapter.display_name,
           branch: config.branch, repo: repo, task: config.task,
           color: tty && !no_color?, hyperlinks: tty, now: now).render
       end

@@ -18,6 +18,11 @@ module Onair
       PREBOOT_HANDOFF = 180
       PREBOOT_NOTE = "preboot: previous web dynos may still serve"
 
+      def initialize(config, repo: nil)
+        super
+        raise Error, NO_APP if app.nil?
+      end
+
       def snapshot
         token = resolve_token
         releases_thread = quiet_thread { releases(token) }
