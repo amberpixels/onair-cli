@@ -8,10 +8,13 @@ module Onair
   class Config
     FILENAME = ".onair.yml"
 
-    attr_reader :platform, :app, :repo, :branch, :fetch, :task
+    attr_reader :platform, :app, :repo, :branch, :fetch, :task, :host
 
-    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil)
+    # `host` is the SSH destination for SSH-driven platforms (Dokku); nil
+    # elsewhere, and only the adapter that needs it checks it.
+    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil, host: nil)
       @platform = platform
+      @host = host
       @app = app
       @repo = repo
       @branch = branch
@@ -30,7 +33,8 @@ module Onair
         repo: env["GITHUB_REPO"] || file["repo"],
         branch: file["branch"] || "main",
         fetch: !flags[:no_fetch],
-        task: TaskLink.from_config(file["task"])
+        task: TaskLink.from_config(file["task"]),
+        host: file["host"]
       )
     end
 

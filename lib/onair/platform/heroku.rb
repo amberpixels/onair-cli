@@ -16,6 +16,7 @@ module Onair
       # With preboot, Heroku keeps routing to the previous web dynos for about
       # three minutes after the new ones come up.
       PREBOOT_HANDOFF = 180
+      PREBOOT_NOTE = "preboot: previous web dynos may still serve"
 
       def snapshot
         token = resolve_token
@@ -34,13 +35,6 @@ module Onair
 
       def app
         @config.app
-      end
-
-      def quiet_thread(&block)
-        Thread.new do
-          Thread.current.report_on_exception = false
-          block.call
-        end
       end
 
       def resolve_token
@@ -138,7 +132,7 @@ module Onair
           .sort_by { |type, _| [(type == "web") ? 0 : 1, type] }
           .map { |type, dynos| process_rollout(type, dynos, version) }
         Rollout.new(version: version, processes: processes,
-          overlap_until: preboot ? preboot_handoff(formation, version) : nil)
+          overlap_until: preboot ? preboot_handoff(formation, version) : nil, overlap_note: PREBOOT_NOTE)
       end
 
       def process_rollout(type, dynos, version)

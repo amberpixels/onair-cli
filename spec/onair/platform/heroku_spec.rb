@@ -204,7 +204,7 @@ RSpec.describe Onair::Platform::Heroku do
       stub_dynos(body: [dyno, dyno, dyno(type: "worker")])
 
       expect(adapter.snapshot.rollout).to eq(
-        Onair::Rollout.new(version: 1234, overlap_until: nil, processes: [
+        Onair::Rollout.new(version: 1234, overlap_until: nil, overlap_note: described_class::PREBOOT_NOTE, processes: [
           Onair::ProcessRollout.new(type: "web", total: 2, up: 2, waiting: {}, previous: 0),
           Onair::ProcessRollout.new(type: "worker", total: 1, up: 1, waiting: {}, previous: 0)
         ])

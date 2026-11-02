@@ -9,13 +9,19 @@ module Onair
   CommitInfo = Data.define(:subject, :author_name, :author_email, :committed_at)
 
   # The release currently running in production. `sha` may be nil when the
-  # platform can't resolve the running commit; version/description still render.
+  # platform can't resolve the running commit; `version` is nil on platforms
+  # that number nothing.
   Deployed = Data.define(:sha, :version, :description, :deployed_at)
 
-  Pending = Data.define(:sha, :started_at)
+  # An in-flight build. `sha` is nil when the platform's builds carry no
+  # commit; `build_id` then names the row.
+  Pending = Data.define(:sha, :build_id, :started_at) do
+    def initialize(sha:, started_at:, build_id: nil) = super
+  end
 
   # A release newer than the running one that is not serving traffic: its
   # release phase is still running (status :pending) or it failed (:failed).
+  # A nil `sha` is a failed build whose commit the platform does not record.
   Release = Data.define(:sha, :version, :description, :status, :started_at)
 
   # Dynos of one process type against the running release. `up` counts dynos
@@ -28,8 +34,11 @@ module Onair
   end
 
   # How far the running release has reached its dynos. `overlap_until` is an
-  # estimate of when the previous release stops serving traffic, or nil.
-  Rollout = Data.define(:version, :processes, :overlap_until) do
+  # estimate of when the previous release stops serving traffic, or nil;
+  # `overlap_note` is the platform's phrase for that window.
+  Rollout = Data.define(:version, :processes, :overlap_until, :overlap_note) do
+    def initialize(version:, processes:, overlap_until:, overlap_note: nil) = super
+
     def complete?
       processes.all?(&:complete?) && overlap_until.nil?
     end
@@ -54,6 +63,7 @@ require_relative "onair/auth/github_token"
 require_relative "onair/remote_head"
 require_relative "onair/platform/base"
 require_relative "onair/platform/heroku"
+require_relative "onair/platform/dokku"
 require_relative "onair/renderer/tty"
 require_relative "onair/renderer/json"
 require_relative "onair/cli"

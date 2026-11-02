@@ -51,10 +51,25 @@ RSpec.describe Onair::Renderer::Json do
     out = render(report)
     expect(out["delta"]).to eq("status" => "behind", "behind_by" => 2)
     expect(out["pinned"]).to eq("version" => 1234, "description" => "Deploy aaaaaaa", "latest_built_sha" => newer)
-    expect(out["pending"]).to eq("sha" => pending_sha, "started_at" => "2026-06-12T11:00:00Z",
+    expect(out["pending"]).to eq("sha" => pending_sha, "build_id" => nil, "started_at" => "2026-06-12T11:00:00Z",
       "subject" => nil, "author" => nil, "task" => nil)
     expect(out["yours"]).to eq("sha" => mine_sha, "had_own_build" => true,
       "subject" => "Fix the thing (#123)", "author" => "Eugene", "task" => nil)
+  end
+
+  it "emits a commitless pending build and failed build with nil versions" do
+    snap = snapshot(deployed: deployed(sha: deployed_sha, version: nil, description: "deploy source: git-push"),
+      latest: nil,
+      pending: Onair::Pending.new(sha: nil, build_id: "42", started_at: Time.utc(2026, 6, 12, 11, 59, 0)),
+      release: in_flight_release(sha: nil, status: :failed, version: nil, description: "build 41"))
+    report = Onair::Report.new(snapshot: snap, remote_head: deployed_sha, delta: :current, pinned: false,
+      mine: nil, rollout: nil, commits: {deployed_sha => commit_info})
+    out = render(report)
+    expect(out["deployed"]).to include("sha" => deployed_sha, "version" => nil)
+    expect(out["pending"]).to eq("sha" => nil, "build_id" => "42", "started_at" => "2026-06-12T11:59:00Z",
+      "subject" => nil, "author" => nil, "task" => nil)
+    expect(out["release"]).to include("sha" => nil, "version" => nil, "description" => "build 41",
+      "status" => "failed")
   end
 
   it "emits an in-flight release" do

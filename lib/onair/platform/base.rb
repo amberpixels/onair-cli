@@ -33,6 +33,9 @@ module Onair
     #                     release, plus an optional estimate of when the
     #                     previous release stops serving; nil when unknown
     #
+    # Versions may be nil on every value, and pending/release shas may be nil
+    # when the platform's builds carry no commit; renderers drop what is absent.
+    #
     # Adapters own their internal concurrency and auth. Everything above
     # (delta, pinned, mine, rendering) is platform-agnostic and must not
     # reference any specific platform.
@@ -47,6 +50,17 @@ module Onair
 
       def display_name
         self.class.name.split("::").last
+      end
+
+      private
+
+      # Exceptions surface via #value; without this the dying thread also
+      # prints its own backtrace to stderr.
+      def quiet_thread(&block)
+        Thread.new do
+          Thread.current.report_on_exception = false
+          block.call
+        end
       end
     end
   end

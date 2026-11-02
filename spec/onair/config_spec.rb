@@ -26,6 +26,18 @@ RSpec.describe Onair::Config do
     expect(config.fetch).to be(true)
   end
 
+  it "reads the SSH host for SSH-driven platforms" do
+    write_config("platform" => "dokku", "host" => "my-dokku")
+    config = described_class.resolve({}, env: {}, dir: @dir)
+    expect(config.platform).to eq("dokku")
+    expect(config.host).to eq("my-dokku")
+  end
+
+  it "leaves the host nil when the file has none" do
+    write_config
+    expect(described_class.resolve({}, env: {}, dir: @dir).host).to be_nil
+  end
+
   it "prefers CLI flags over env vars over the file" do
     write_config
     env = {"HEROKU_APP" => "env-app"}

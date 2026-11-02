@@ -99,6 +99,13 @@ RSpec.describe Onair::Report do
       expect(report.delta).to be_nil
     end
 
+    it "keeps current after a failed build with no known commit" do
+      snap = snapshot(deployed: deployed(sha: deployed_sha),
+        release: in_flight_release(sha: nil, status: :failed, version: nil, description: "build 41"))
+      report = build(snapshot: snap, remote_head: deployed_sha, git: FakeGit.new)
+      expect(report.delta).to eq(:current)
+    end
+
     it "keeps current when the in-flight release carries the running commit" do
       snap = snapshot(deployed: deployed(sha: deployed_sha), release: in_flight_release(sha: deployed_sha))
       report = build(snapshot: snap, remote_head: deployed_sha, git: FakeGit.new)

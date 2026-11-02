@@ -158,6 +158,57 @@ RSpec.describe Onair::Renderer::Tty do
     )
   end
 
+  describe "a platform with no versions and commitless builds" do
+    def dokku_render(snap, rollout: nil)
+      render(report(snapshot: snap, delta: :current, commits: {deployed_sha => commit_info}, rollout: rollout))
+    end
+
+    let(:dokku_deployed) { deployed(sha: deployed_sha, version: nil, description: "deploy source: git-push", at: now - 600) }
+
+    it "renders a pending build without a commit" do
+      snap = snapshot(deployed: dokku_deployed, latest: nil,
+        pending: Onair::Pending.new(sha: nil, build_id: "42", started_at: now - 60))
+      expect(dokku_render(snap)).to include(
+        "  Pending:    build 42  (started 1m ago)  ⟳ deploying\n\n  Deployed:   aaaaaaaaa  (10m ago) by Alice  ★ current\n"
+      )
+    end
+
+    it "renders a failed build without a commit or version" do
+      snap = snapshot(deployed: dokku_deployed, latest: nil,
+        release: in_flight_release(sha: nil, status: :failed, version: nil, description: "build 41", at: now - 180))
+      expect(dokku_render(snap)).to include("  Failed:     build 41  (3m ago)  ✗ build failed\n\n  Deployed:")
+    end
+
+    it "drops the version from rollout lines" do
+      done = dyno_rollout(version: nil, processes: [process_rollout(total: 2)], overlap_note: "retiring: x")
+      expect(dokku_render(snapshot(deployed: dokku_deployed, latest: nil), rollout: done))
+        .to include("✓ rolled out: web 2/2\n")
+      busy = dyno_rollout(version: nil, processes: [process_rollout(total: 2, ready: 1, waiting: {"created" => 1})])
+      expect(dokku_render(snapshot(deployed: dokku_deployed, latest: nil), rollout: busy))
+        .to include("⟳ rolling out: web 1/2, 1 created\n")
+    end
+
+    it "takes the overlap wording from the rollout" do
+      rollout = dyno_rollout(version: nil, overlap_until: now + 45,
+        overlap_note: "retiring: previous containers may still serve")
+      expect(dokku_render(snapshot(deployed: dokku_deployed, latest: nil), rollout: rollout))
+        .to include("⟳ retiring: previous containers may still serve for ~45s (estimate)")
+    end
+
+    it "renders the unresolvable-deploy line without a version" do
+      snap = snapshot(deployed: deployed(sha: nil, version: nil, description: "deploy source: git:from-image"),
+        latest: nil)
+      expect(render(report(snapshot: snap)))
+        .to include("Could not resolve the running commit (deploy source: git:from-image).\n")
+    end
+
+    it "renders the pinned line without a version" do
+      snap = snapshot(deployed: dokku_deployed, latest: sha_of("c"))
+      expect(render(report(snapshot: snap, pinned: true, commits: {deployed_sha => commit_info})))
+        .to include("⏸ (deploy source: git-push) - newer build ccccccccc succeeded but is not running")
+    end
+  end
+
   describe "task links" do
     let(:task) { Onair::TaskLink.from_config("pattern" => 'ABC-\d+', "url" => "https://tracker.example/{task}") }
     let(:rep) do
