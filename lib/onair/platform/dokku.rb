@@ -58,6 +58,7 @@ module Onair
       def validate!
         raise Error, "no host configured - add `host:` to #{Config::FILENAME}" if host.to_s.empty?
         raise Error, "invalid Dokku host #{host.inspect}" if host.start_with?("-")
+        raise Error, NO_APP if app.nil?
         raise Error, "invalid Dokku app name #{app.inspect}" unless APP_NAME.match?(app)
       end
 

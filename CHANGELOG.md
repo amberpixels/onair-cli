@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-02
+
+- GitHub Deployments: `platform: github_deployments` reads one environment's
+  deployments (`environment:`, default `production`) through the GitHub API
+  with the `gh` token, so anyone who can read the repo sees what is deployed
+  without host access. The newest successful deployment is Deployed, a newer
+  in-flight one is Pending with its commit, and a newer failed one is Failed.
+  It reports what CI recorded, not what the host runs.
+- `app:` is required only by the platforms that use it. `--json` gains an
+  `environment` field, and `deployed` is `null` when nothing successful is deployed yet.
+
 ## [0.4.0] - 2026-11-02
 
 - Dokku: `platform: dokku` with a `host:` reads the running commit from the

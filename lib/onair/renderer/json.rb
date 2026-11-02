@@ -8,8 +8,9 @@ module Onair
     # Machine-readable status. The schema is a public API documented in the
     # README — additive changes only.
     class Json
-      def initialize(report:, app:, platform:, branch:, repo:, task: nil)
+      def initialize(report:, app:, platform:, branch:, repo:, environment: nil, task: nil)
         @report = report
+        @environment = environment
         @app = app
         @platform = platform
         @branch = branch
@@ -27,6 +28,7 @@ module Onair
           platform: @platform,
           branch: @branch,
           repo: @repo,
+          environment: @environment,
           remote_head: @report.remote_head,
           deployed: deployed_payload,
           pending: pending_payload,

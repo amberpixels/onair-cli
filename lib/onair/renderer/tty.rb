@@ -65,14 +65,27 @@ module Onair
         return [] if release.nil?
         return build_failed_lines(release) if release.sha.nil?
 
+        label, color, note = release.version.nil? ? versionless_release(release) : versioned_release(release)
+        row_lines(label, color, release.sha, age(release.started_at), extra: paint(note, color)) + [""]
+      end
+
+      def versioned_release(release)
         detail = version_label(release.version)
         detail = [detail, release.description].compact.join(": ") if release.sha == snapshot.deployed&.sha
-        label, color, note = if release.status == :failed
+        if release.status == :failed
           ["Failed:", :red, "✗ release phase failed (#{detail})"]
         else
           ["Releasing:", :yellow, "⟳ release phase (#{detail})"]
         end
-        row_lines(label, color, release.sha, age(release.started_at), extra: paint(note, color)) + [""]
+      end
+
+      # A platform that numbers no releases names the deploy by its description.
+      def versionless_release(release)
+        if release.status == :failed
+          ["Failed:", :red, "✗ deploy failed (#{release.description})"]
+        else
+          ["Releasing:", :yellow, "⟳ deploying (#{release.description})"]
+        end
       end
 
       # A failed build whose commit the platform does not record.
@@ -83,15 +96,17 @@ module Onair
 
       def deployed_lines
         deployed = snapshot.deployed
-        if deployed&.sha
+        return ["  #{paint("No successful deploy recorded.", :yellow)}"] if deployed.nil?
+
+        if deployed.sha
           lines = row_lines("Deployed:", :green, deployed.sha, age(deployed.deployed_at), extra: delta_text)
           lines << rollout_line if @report.rollout
           lines << pinned_line if @report.pinned
           lines.concat(yours_lines)
           lines
         else
-          subject = ["the running commit", version_label(deployed&.version)].compact.join(" for ")
-          ["  #{paint("Could not resolve #{subject} (#{deployed&.description}).", :yellow)}"]
+          subject = ["the running commit", version_label(deployed.version)].compact.join(" for ")
+          ["  #{paint("Could not resolve #{subject} (#{deployed.description}).", :yellow)}"]
         end
       end
 

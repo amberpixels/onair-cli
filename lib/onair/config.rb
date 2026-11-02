@@ -8,13 +8,16 @@ module Onair
   class Config
     FILENAME = ".onair.yml"
 
-    attr_reader :platform, :app, :repo, :branch, :fetch, :task, :host
+    DEFAULT_ENVIRONMENT = "production"
 
-    # `host` is the SSH destination for SSH-driven platforms (Dokku); nil
-    # elsewhere, and only the adapter that needs it checks it.
-    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil, host: nil)
+    attr_reader :platform, :app, :repo, :branch, :fetch, :task, :host, :environment
+
+    # `app`, `host` and `environment` are each read by the adapters that need
+    # them; those adapters check them, so any may be nil elsewhere.
+    def initialize(platform:, app:, repo:, branch:, fetch:, task: nil, host: nil, environment: nil)
       @platform = platform
       @host = host
+      @environment = environment
       @app = app
       @repo = repo
       @branch = branch
@@ -27,7 +30,6 @@ module Onair
       platform = file["platform"] || "heroku"
       # HEROKU_APP names a Heroku app, so it must not redirect another platform.
       app = flags[:app] || ((platform == "heroku") ? env["HEROKU_APP"] : nil) || file["app"]
-      raise Error, "no app configured - pass --app NAME, set HEROKU_APP, or run `onair init`" if app.nil?
 
       new(
         platform: platform,
@@ -36,7 +38,8 @@ module Onair
         branch: file["branch"] || "main",
         fetch: !flags[:no_fetch],
         task: TaskLink.from_config(file["task"]),
-        host: file["host"]
+        host: file["host"],
+        environment: file["environment"] || DEFAULT_ENVIRONMENT
       )
     end
 

@@ -331,6 +331,12 @@ RSpec.describe Onair::Platform::Heroku do
     expect { adapter.snapshot }.to raise_error(Onair::Error, /Heroku API request failed/)
   end
 
+  it "requires an app" do
+    config = Onair::Config.new(platform: "heroku", app: nil, repo: nil, branch: "main", fetch: true)
+    expect { described_class.new(config) }
+      .to raise_error(Onair::Error, /--app NAME, set HEROKU_APP, or run `onair init`/)
+  end
+
   describe "auth" do
     it "falls back to the Heroku CLI when netrc yields nothing" do
       allow(Onair::Auth::Netrc).to receive(:token).and_return(nil)

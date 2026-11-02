@@ -28,6 +28,8 @@ case.
 ## Principles
 
 1. **Truth over convenience.** What's *running*, not what was built last.
+   The one exception is opt-in: `platform: github_deployments` reports what
+   CI recorded, not what the host runs (see [GitHub Deployments](#github-deployments)).
 2. **Zero runtime dependencies.** Ruby stdlib only.
 3. **Read-only.** Never deploys, never rolls back, never writes to git except
    an explicit lazy `git fetch`.
@@ -123,6 +125,65 @@ another way (`git:from-image`, `git:sync`) shows the deploy source instead
 of a commit. Dokku builds record no commit, so `Pending` and `Failed` name
 the build, and pinned detection stays silent.
 
+### GitHub Deployments
+
+For teams whose CI deploys to a host most developers cannot reach (a Dokku
+box behind a firewall, a VPS where only admins hold SSH keys). If CI records
+each deploy as a GitHub Deployment, anyone who can read the repo sees what is
+deployed, with no access to the host.
+
+```yaml
+platform: github_deployments
+repo: acme/widgets       # default: inferred from origin
+environment: production  # default: production
+```
+
+No `app:` is needed. onair reads the environment's last 10 deployments and
+the newest status of each through the GitHub API, with the token from
+`GH_TOKEN`, `GITHUB_TOKEN` or `gh auth token`; without one it asks you to run
+`gh auth login`. The token needs read access to the repo's deployments.
+
+- **Deployed** is the newest deployment whose status is `success`.
+- **Pending** is a newer deployment that is `queued`, `pending` or
+  `in_progress`, with its commit.
+- **Failed** is a newer deployment whose status is `failure` or `error`.
+- A deployment with no status yet is ignored.
+- With no successful deployment among the last 10, the report says so in one
+  line, under any Pending or Failed row.
+- If the status of a deployment newer than the deployed one cannot be read,
+  the report fails rather than show an older commit as running.
+
+**This adapter reports what CI recorded, not what the host runs.** A deploy
+that bypassed CI stays invisible until the next recorded one, and a CI job
+that records the sha it pushed reports that sha even if the host ended up
+running something else. So have CI record the sha it reads back from the host
+after the deploy, not the sha it pushed. For example, in GitHub Actions:
+
+```yaml
+permissions:
+  deployments: write
+steps:
+  - uses: actions/checkout@v4
+  - name: Deploy
+    env:
+      GH_TOKEN: ${{ github.token }}
+    run: |
+      id=$(gh api repos/${{ github.repository }}/deployments \
+        -f ref=${{ github.sha }} -f environment=production \
+        -F auto_merge=false -f 'required_contexts[]' --jq .id)
+      gh api repos/${{ github.repository }}/deployments/$id/statuses -f state=in_progress
+      if ./deploy.sh && [ "$(./running-sha.sh)" = "${{ github.sha }}" ]; then
+        state=success
+      else
+        state=failure
+      fi
+      gh api repos/${{ github.repository }}/deployments/$id/statuses -f state=$state
+```
+
+Here `deploy.sh` deploys and `running-sha.sh` asks the host which commit it
+runs. When the host runs a different commit than the one pushed, the job
+records a failure rather than a false success.
+
 ### Task links (optional)
 
 If your commit subjects carry task ids (Jira, Linear, Notion, anything), tell
@@ -149,6 +210,7 @@ additively:
   "platform": "heroku",
   "branch": "main",
   "repo": "acme/widgets",
+  "environment": null,
   "remote_head": "<sha>",
   "deployed": {
     "sha": "<sha>", "version": 1234, "description": "Deploy a1b2c3d4",
@@ -171,6 +233,9 @@ additively:
 ```
 
 - `delta.status` is `"current"`, `"behind"`, or `"unknown"`.
+- `environment` is the GitHub Deployments environment read, `null` on other
+  platforms. With `platform: github_deployments`, `app` is `null`, and
+  `deployed` is `null` when no deployment among the last 10 succeeded.
 - `pending`: `{ "sha", "build_id", "started_at", "subject", "author" }` when
   a build is in flight. On Dokku `sha` is `null` and `build_id` names the
   build; on Heroku `build_id` is `null`.

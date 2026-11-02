@@ -10,6 +10,15 @@ RSpec.describe Onair::Renderer::Json do
       branch: "main", repo: "acme/widgets", task: task).render)
   end
 
+  it "carries the environment and a null deploy when nothing is deployed" do
+    report = Onair::Report.new(snapshot: snapshot(deployed: nil), remote_head: deployed_sha, delta: nil,
+      pinned: false, mine: nil, rollout: nil, commits: {})
+    payload = JSON.parse(described_class.new(report: report, app: nil, platform: "github_deployments",
+      branch: "main", repo: "acme/widgets", environment: "production").render)
+    expect(payload).to include("app" => nil, "environment" => "production", "deployed" => nil,
+      "delta" => {"status" => "unknown", "behind_by" => nil})
+  end
+
   it "emits the full schema for a current deploy" do
     report = Onair::Report.new(
       snapshot: snapshot(deployed: deployed(sha: deployed_sha, at: Time.utc(2026, 6, 12, 10, 0, 0))),
@@ -21,6 +30,7 @@ RSpec.describe Onair::Renderer::Json do
       "platform" => "heroku",
       "branch" => "main",
       "repo" => "acme/widgets",
+      "environment" => nil,
       "remote_head" => deployed_sha,
       "deployed" => {
         "sha" => deployed_sha, "version" => 1234, "description" => "Deploy aaaaaaa",

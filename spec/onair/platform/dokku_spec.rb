@@ -207,6 +207,16 @@ RSpec.describe Onair::Platform::Dokku do
     end
   end
 
+  context "without an app" do
+    let(:config) do
+      Onair::Config.new(platform: "dokku", app: nil, repo: nil, branch: "main", fetch: true, host: host)
+    end
+
+    it "asks for one" do
+      expect { adapter.snapshot }.to raise_error(Onair::Error, /no app configured/)
+    end
+  end
+
   context "without a host" do
     let(:host) { nil }
 
