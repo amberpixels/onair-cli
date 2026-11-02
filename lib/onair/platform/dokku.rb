@@ -22,6 +22,10 @@ module Onair
       # app's wait-to-retire, 60 seconds unless configured.
       DEFAULT_WAIT_TO_RETIRE = 60
       RETIRE_NOTE = "retiring: previous containers may still serve"
+      # Wall-clock limit per command, matching the Heroku adapter's read timeout.
+      COMMAND_TIMEOUT = 15
+      SSH_OPTIONS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+        "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"].freeze
 
       def snapshot
         validate!
@@ -56,6 +60,8 @@ module Onair
         raise Error, "invalid Dokku app name #{app.inspect}" unless APP_NAME.match?(app)
       end
 
+      # Dokku strips the plugin prefix from report JSON keys, so git:report's
+      # `--git-last-updated-at` arrives as `last-updated-at`.
       # Only a git push records the pushed commit. git:report's sha is not
       # used: it can read the repo's HEAD rather than what was deployed.
       def deployed(apps, git)
@@ -146,8 +152,8 @@ module Onair
       # Dokku prints warnings on stderr (e.g. "Skipping unreadable build
       # record"), so only stdout is parsed.
       def dokku(subcommand)
-        stdout, stderr, status = Open3.capture3("ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
-          host, subcommand, app, "--format", "json")
+        stdout, stderr, status = run(["ssh", *SSH_OPTIONS, host, subcommand, app, "--format", "json"])
+        raise Error, "dokku #{subcommand} timed out on #{host}" if status.nil?
         raise Error, ssh_error(subcommand, stderr, status) unless status.success?
 
         JSON.parse(stdout)
@@ -155,6 +161,25 @@ module Onair
         raise Error, "ssh not found - the Dokku platform needs an ssh client on PATH"
       rescue JSON::ParserError
         raise Error, "Dokku returned invalid JSON for #{subcommand}"
+      end
+
+      # Returns [stdout, stderr, status], with a nil status when the command
+      # outlived the timeout and was killed.
+      def run(argv, timeout: COMMAND_TIMEOUT)
+        Open3.popen3(*argv) do |stdin, stdout, stderr, wait|
+          stdin.close
+          out = Thread.new { stdout.read }
+          err = Thread.new { stderr.read }
+          unless wait.join(timeout)
+            begin
+              Process.kill("KILL", wait.pid)
+            rescue Errno::ESRCH
+              nil
+            end
+            return [out.value, err.value, nil]
+          end
+          [out.value, err.value, wait.value]
+        end
       end
 
       # ssh itself exits 255; anything else is Dokku's own exit code.

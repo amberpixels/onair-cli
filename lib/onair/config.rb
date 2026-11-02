@@ -24,11 +24,13 @@ module Onair
 
     def self.resolve(flags = {}, env: ENV, dir: Dir.pwd)
       file = find_file(dir) || {}
-      app = flags[:app] || env["HEROKU_APP"] || file["app"]
+      platform = file["platform"] || "heroku"
+      # HEROKU_APP names a Heroku app, so it must not redirect another platform.
+      app = flags[:app] || ((platform == "heroku") ? env["HEROKU_APP"] : nil) || file["app"]
       raise Error, "no app configured - pass --app NAME, set HEROKU_APP, or run `onair init`" if app.nil?
 
       new(
-        platform: file["platform"] || "heroku",
+        platform: platform,
         app: app,
         repo: env["GITHUB_REPO"] || file["repo"],
         branch: file["branch"] || "main",

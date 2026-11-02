@@ -101,7 +101,7 @@ branch: main         # comparison branch; default: main
 ```
 
 Resolution order: CLI flags → env vars (`HEROKU_APP`, `GITHUB_REPO`) →
-`.onair.yml`.
+`.onair.yml`. `HEROKU_APP` applies only with `platform: heroku`.
 
 ### Dokku
 

@@ -33,6 +33,12 @@ RSpec.describe Onair::Config do
     expect(config.host).to eq("my-dokku")
   end
 
+  it "ignores HEROKU_APP on other platforms" do
+    write_config("platform" => "dokku", "app" => "shop")
+    config = described_class.resolve({}, env: {"HEROKU_APP" => "shop-prod"}, dir: @dir)
+    expect(config.app).to eq("shop")
+  end
+
   it "leaves the host nil when the file has none" do
     write_config
     expect(described_class.resolve({}, env: {}, dir: @dir).host).to be_nil

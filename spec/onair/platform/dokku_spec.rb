@@ -37,10 +37,10 @@ RSpec.describe Onair::Platform::Dokku do
       "apps:report" => reply(apps_report), "git:report" => reply(git_report),
       "builds:list" => reply(builds), "ps:report" => reply(ps_report), "checks:report" => reply(checks_report)
     }.merge(overrides)
-    allow(Open3).to receive(:capture3) do |*argv|
-      expect(argv).to eq(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host, argv[6],
-        "myapp", "--format", "json"])
-      replies.fetch(argv[6])
+    allow(adapter).to receive(:run) do |argv|
+      expect(argv).to eq(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ServerAliveInterval=5",
+        "-o", "ServerAliveCountMax=3", host, argv[10], "myapp", "--format", "json"])
+      replies.fetch(argv[10])
     end
   end
 
@@ -146,6 +146,59 @@ RSpec.describe Onair::Platform::Dokku do
     stub_dokku("apps:report" => reply("", stderr: " !     App myapp does not exist\n", exit: 1))
     expect { adapter.snapshot }
       .to raise_error(Onair::Error, "dokku apps:report failed on my-dokku: App myapp does not exist")
+  end
+
+  it "names an unreachable host without the ssh-add hint" do
+    stub_dokku("apps:report" => reply("", stderr: "ssh: connect to host my-dokku port 22: Connection refused\n",
+      exit: 255))
+    expect { adapter.snapshot }
+      .to raise_error(Onair::Error, "could not reach my-dokku over SSH: ssh: connect to host my-dokku port 22: " \
+        "Connection refused")
+  end
+
+  it "reports a missing ssh client in one line" do
+    allow(adapter).to receive(:run).and_raise(Errno::ENOENT)
+    expect { adapter.snapshot }.to raise_error(Onair::Error, /ssh not found/)
+  end
+
+  it "reports invalid JSON on stdout" do
+    stub_dokku("apps:report" => reply("not json"))
+    expect { adapter.snapshot }.to raise_error(Onair::Error, "Dokku returned invalid JSON for apps:report")
+  end
+
+  it "reports a command that outlived the timeout" do
+    stub_dokku("apps:report" => ["", "", nil])
+    expect { adapter.snapshot }.to raise_error(Onair::Error, "dokku apps:report timed out on my-dokku")
+  end
+
+  it "reports a failed build when no succeeded build is listed" do
+    builds.replace([build("8", "failed", started: "2026-06-12T11:50:00Z", finished: "2026-06-12T11:51:00Z")])
+    stub_dokku
+    expect(adapter.snapshot.release.description).to eq("build 8")
+  end
+
+  describe "running a command" do
+    it "returns stdout, stderr and the exit status" do
+      out, err, status = adapter.send(:run, ["sh", "-c", "echo out; echo err >&2; exit 3"])
+      expect([out, err, status.exitstatus]).to eq(["out\n", "err\n", 3])
+    end
+
+    it "kills a command that outlives the timeout" do
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      _, _, status = adapter.send(:run, ["sleep", "5"], timeout: 0.2)
+      expect(status).to be_nil
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 2
+    end
+  end
+
+  context "with an invalid app name" do
+    let(:config) do
+      Onair::Config.new(platform: "dokku", app: "My_App", repo: nil, branch: "main", fetch: true, host: host)
+    end
+
+    it "refuses it" do
+      expect { adapter.snapshot }.to raise_error(Onair::Error, /invalid Dokku app name/)
+    end
   end
 
   context "without a host" do
