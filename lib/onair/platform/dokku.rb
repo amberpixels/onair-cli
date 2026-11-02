@@ -14,9 +14,10 @@ module Onair
       FULL_SHA = /\A\h{40}\z/
       # Dokku app names: lowercase letters, digits and dashes.
       APP_NAME = /\A[a-z0-9][a-z0-9-]*\z/
-      # ps:report lists one `status-<process>-<n>` entry per container,
-      # valued like "running (CID: 0123456789a)".
-      CONTAINER_STATUS = /\Astatus-(?<type>.+)-\d+\z/
+      # ps:report's JSON lists one `status-<process>.<n>` entry per container
+      # (named after its CONTAINER.<process>.<n> file), valued like
+      # "running (CID: 0123456789a)". The text output's dash form also matches.
+      CONTAINER_STATUS = /\Astatus-(?<type>.+)[.-]\d+\z/
       SERVING_STATE = "running"
       # After a deploy, Dokku keeps the previous containers serving for the
       # app's wait-to-retire, 60 seconds unless configured.

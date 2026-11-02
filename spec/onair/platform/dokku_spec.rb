@@ -16,8 +16,8 @@ RSpec.describe Onair::Platform::Dokku do
   let(:git_report) { {"last-updated-at" => "1781258400", "sha" => sha_of("e"), "deploy-branch" => "main"} }
   let(:ps_report) do
     {"deployed" => "true", "running" => "true", "processes" => "3",
-     "status-web-1" => "running (CID: 0123456789a)", "status-web-2" => "running (CID: 0123456789b)",
-     "status-worker-1" => "running (CID: 0123456789c)"}
+     "status-web.1" => "running (CID: 0123456789a)", "status-web.2" => "running (CID: 0123456789b)",
+     "status-worker.1" => "running (CID: 0123456789c)"}
   end
   let(:checks_report) { {"computed-wait-to-retire" => "60", "wait-to-retire" => ""} }
   let(:builds) { [build("7", "succeeded", started: "2026-06-12T10:00:00.123456Z", finished: "2026-06-12T10:00:40Z")] }
@@ -95,7 +95,7 @@ RSpec.describe Onair::Platform::Dokku do
   end
 
   it "aggregates containers per process type, web first" do
-    ps_report["status-worker-2"] = "restarting (CID: 0123456789d)"
+    ps_report["status-worker.2"] = "restarting (CID: 0123456789d)"
     stub_dokku
     rollout = adapter.snapshot.rollout
     expect(rollout.version).to be_nil
@@ -113,8 +113,14 @@ RSpec.describe Onair::Platform::Dokku do
     expect(adapter.snapshot.rollout.overlap_until).to eq(Time.utc(2026, 6, 12, 10, 2, 10))
   end
 
+  it "also reads the dash-numbered keys of the text output" do
+    ps_report.replace("status-web-1" => "running (CID: 0123456789e)")
+    stub_dokku
+    expect(adapter.snapshot.rollout.processes.map(&:type)).to eq(["web"])
+  end
+
   it "keeps process types that contain dashes" do
-    ps_report.replace("status-release-worker-1" => "running (CID: 0123456789e)")
+    ps_report.replace("status-release-worker.1" => "running (CID: 0123456789e)")
     stub_dokku
     expect(adapter.snapshot.rollout.processes.map(&:type)).to eq(["release-worker"])
   end
