@@ -1,18 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 80" width="460" height="80">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 404 80" width="404" height="80" xml:space="preserve">
   <style>
     text { font-family: 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 20px; white-space: pre; }
   </style>
-  <rect width="460" height="80" rx="6" fill="transparent"/>
+  <rect width="404" height="80" rx="6" fill="transparent"/>
   <!-- Row 1 -->
-  <text y="28">
-    <tspan fill="#D9251F"> ░█▀▀▀█</tspan><tspan fill="#F03B24"> ░█▄─░█</tspan><tspan fill="#FB5D1E"> ░█▀▀█</tspan><tspan fill="#FF7A17"> ▀█▀</tspan><tspan fill="#FF9A0E"> ░█▀▀█</tspan>
-  </text>
+  <text y="28"><tspan fill="#D9251F"> ░█▀▀▀█</tspan><tspan fill="#F03B24"> ░█▄─░█</tspan><tspan fill="#FB5D1E"> ░█▀▀█</tspan><tspan fill="#FF7A17"> ▀█▀</tspan><tspan fill="#FF9A0E"> ░█▀▀█</tspan></text>
   <!-- Row 2 -->
-  <text y="52">
-    <tspan fill="#D9251F"> ░█──░█</tspan><tspan fill="#F03B24"> ░█▀▄░█</tspan><tspan fill="#FB5D1E"> ░█▄▄█</tspan><tspan fill="#FF7A17"> ░█─</tspan><tspan fill="#FF9A0E"> ░█▄▄▀</tspan>
-  </text>
+  <text y="52"><tspan fill="#D9251F"> ░█──░█</tspan><tspan fill="#F03B24"> ░█▀▄░█</tspan><tspan fill="#FB5D1E"> ░█▄▄█</tspan><tspan fill="#FF7A17"> ░█─</tspan><tspan fill="#FF9A0E"> ░█▄▄▀</tspan></text>
   <!-- Row 3 -->
-  <text y="76">
-    <tspan fill="#D9251F"> ░█▄▄▄█</tspan><tspan fill="#F03B24"> ░█─▀░█</tspan><tspan fill="#FB5D1E"> ░█─░█</tspan><tspan fill="#FF7A17"> ▄█▄</tspan><tspan fill="#FF9A0E"> ░█─░█</tspan>
-  </text>
+  <text y="76"><tspan fill="#D9251F"> ░█▄▄▄█</tspan><tspan fill="#F03B24"> ░█─▀░█</tspan><tspan fill="#FB5D1E"> ░█─░█</tspan><tspan fill="#FF7A17"> ▄█▄</tspan><tspan fill="#FF9A0E"> ░█─░█</tspan></text>
+  <!-- Ruby gem: nf-seti-ruby from Nerd Fonts (Seti UI, MIT) -->
+  <path transform="translate(368,75.9) scale(0.0345,-0.0345)" fill="#CC342D" d="M153 -59Q61 -47 23 24Q12 47 7 68L6 73L38 127L71 184Q90 130 113 64Q123 36 134 5Q144 -26 150 -42L156 -57V-60ZM224 -56 229 -36Q234 -16 244 22Q254 62 263 98L301 252Q594 140 596.0 139.0Q598 138 580.0 123.0Q562 108 542 92Q388 -30 234 -55Q232 -55 230 -56H224ZM390 -48Q395 -45 400 -43Q488 -3 578 72Q601 91 636 123L638 125L717 55Q796 -15 798 -16Q802 -18 804 -18L806 -19Q714 -25 602 -33Q556 -36 502.0 -40.0Q448 -44 421 -46Q395 -48 394 -48ZM145 90 101 216 261 252Q262 252 244.0 180.0Q226 108 208 36L189 -36Q169 21 145 90ZM825 8Q823 12 820 15Q818 16 808.0 25.0Q798 34 778.0 52.0Q758 70 741 84L666 151V152L670 156Q674 160 678 164Q748 239 797 314Q823 351 849 404L858 421Q832 80 826 7V4ZM0 249V360Q53 236 54 232Q42 210 27 184L0 137ZM470 228Q436 242 399.0 256.0Q362 270 344 277L325 284L323 285L418 374Q511 460 516 465L518 467L560 338Q570 307 582.0 272.0Q594 237 600 216Q608 195 609 191L614 173Q549 198 470 228ZM649 190 554 482Q829 488 838 488H844L840 476Q801 374 715 266Q684 228 665 207L649 190ZM54 330 21 408 69 491Q116 572 120 576Q122 579 208.0 659.0Q294 739 296 740Q298 742 372.0 770.0Q446 798 448 796Q477 776 511 752Q572 708 572 707L568 695Q564 683 556.0 657.0Q548 631 541 609L510 511Q508 511 396.0 406.0Q284 301 280 297L277 295L184 274Q90 252 88 252H87ZM553 521 605 685Q654 650 714 606L823 527L820 526H812Q804 526 792.0 526.0Q780 526 765 524Q750 524 730.0 524.0Q710 524 689.0 523.0Q668 522 648.0 522.0Q628 522 612.0 522.0Q596 522 584 520Q572 520 564 520H557Q553 520 553 521ZM744 631 628 715Q660 733 699 755L770 794L774 792Q782 789 800 779Q851 748 866 686Q873 656 873 635Q873 612 870 594Q863 546 861 546Q808 585 744 631ZM544 775 495 810H551H664H720L657 775L595 740Q572 756 545 775Z"/>
 </svg>
