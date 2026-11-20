@@ -20,33 +20,25 @@
        width="760">
 </p>
 
-`onair` answers one question fast and truthfully. The deployed commit comes
-from the running release's *slug*, never from "newest build" - after a
-rollback those differ, and the whole point of this tool is to not lie in that
-case.
+`onair` tells you which commit production is running. It reads the running
+release, not the newest build, so it stays correct after a rollback.
 
-## Principles
+It never deploys or rolls back. The one thing it writes is a lazy
+`git fetch`. It needs nothing beyond the Ruby standard library. Offline or
+with commits missing, it still prints a useful report instead of a stack
+trace.
 
-1. **Truth over convenience.** What's *running*, not what was built last.
-   The one exception is opt-in: `platform: github_deployments` reports what
-   CI recorded, not what the host runs (see [GitHub Deployments](#github-deployments)).
-2. **Zero runtime dependencies.** Ruby stdlib only.
-3. **Read-only.** Never deploys, never rolls back, never writes to git except
-   an explicit lazy `git fetch`.
-4. **Platform-agnostic core.** Heroku is the first adapter, not the
-   architecture.
-5. **Degrade gracefully.** Offline, missing commits, no color support - every
-   failure mode renders something useful, never a stack trace.
+Heroku, Dokku and GitHub Deployments are supported. GitHub Deployments is
+the one exception to reading the running release: it shows what CI
+recorded, not what the host runs.
 
-## Installation
+## Install
 
 ```sh
 gem install onair-cli
 ```
 
-Requires Ruby >= 3.2. On Heroku, auth reuses the Heroku CLI's token from
-`~/.netrc` (written by `heroku login`), falling back to `heroku auth:token`.
-On Dokku, it reuses your SSH setup (see [Dokku](#dokku)).
+Requires Ruby >= 3.2.
 
 ## Usage
 
@@ -58,42 +50,38 @@ onair --app NAME   # override the app for one invocation
 onair --no-fetch   # never fetch git objects from the remote
 ```
 
-Exit codes: `0` success, `1` operational error. Color is disabled when stdout
-is not a TTY or `NO_COLOR` is set.
+Exit code `0` is success and `1` is an error. Color is off when stdout is not
+a TTY or `NO_COLOR` is set.
 
-### Speed
+If a GitHub token is available (`GH_TOKEN`, `GITHUB_TOKEN` or a logged-in
+`gh`), the head of `origin/<branch>` comes from the GitHub API (~0.4s).
+`git ls-remote` runs alongside and answers when there is no token, the
+remote is not GitHub, or the API fails. Both read the live remote, never a
+cache.
 
-The remote head of `origin/<branch>` is resolved through the GitHub API
-(~0.4s) when a token is ambient - `GH_TOKEN`, `GITHUB_TOKEN`, or a logged-in
-`gh` CLI - with `git ls-remote` always racing alongside as the fallback
-(no token, non-GitHub remote, API failure). Both report the live remote ref;
-the API is a faster transport, never a cache.
+### The report
 
-### What the report shows
+| Row | Meaning |
+|---|---|
+| **Deployed** | The running commit, its age and author, and `★ current` or `↓ N commits behind` against `origin/main`. No marker when the relation is unknown. |
+| **Rollout** | Dynos (Dokku: containers) per process type on that release, e.g. `⟳ rolling out v1234: web 1/3, 2 starting`. Shows `✓ rolled out` once every dyno runs it. |
+| **Pending** | A build in flight that will replace the deploy. |
+| **Releasing** | A newer release still in its release phase. Production still runs Deployed. |
+| **Failed** | The newest release failed its release phase and never went live. Shown until a newer one succeeds. |
+| **⏸ pinned** | A newer build succeeded but is not running, after a rollback or because a release is pinned. |
+| **Yours** | Your commit sits just below someone else's deployed one, so it went out with their deploy. |
 
-- **Deployed** - the commit the running release was built from, its age,
-  author, and a delta against `origin/main`: `★ current` or
-  `↓ N commits behind`. If the relationship is unknown (diverged history,
-  commits unavailable), no marker is shown - silence over speculation.
-- **Rollout** - under the Deployed row, how many dynos of each process type
-  run that release: `⟳ rolling out v1234: web 1/3, 2 starting` while dynos
-  restart, `✓ rolled out` once every dyno is up on it. With preboot on, the
-  previous web dynos keep serving for about three minutes after the new ones
-  are up; that window shows as an estimate. On Dokku it counts containers,
-  and the estimate is the app's wait-to-retire after the newest build.
-- **Pending** - an in-flight build that's about to replace the deploy.
-- **Releasing** - a newer release whose release phase (e.g. migrations) is
-  still running; production still serves the Deployed row until it finishes.
-- **Failed** - the newest release failed its release phase and never went
-  live. It stays until a newer release succeeds.
-- **⏸ pinned** - a newer build succeeded but is *not* what's running
-  (rollback / pinned release).
-- **Yours** - when someone else's commit is deployed but yours sits just
-  below it: your merge made it to prod, absorbed by a later deploy.
+The release phase is the command a platform runs before a release goes
+live, such as database migrations.
+
+Heroku preboot starts the new web dynos before stopping the old ones, so
+the old ones keep serving for about three minutes. Rollout shows that
+handoff as an estimate. On Dokku the estimate is the app's wait-to-retire
+after the newest build.
 
 ## Configuration
 
-`.onair.yml` (searched upward from the working directory to the git root):
+`.onair.yml`, searched upward from the working directory to the git root:
 
 ```yaml
 platform: heroku
@@ -102,8 +90,13 @@ repo: acme/widgets   # for PR/commit links; default: inferred from origin
 branch: main         # comparison branch; default: main
 ```
 
-Resolution order: CLI flags → env vars (`HEROKU_APP`, `GITHUB_REPO`) →
+CLI flags win over env vars (`HEROKU_APP`, `GITHUB_REPO`), which win over
 `.onair.yml`. `HEROKU_APP` applies only with `platform: heroku`.
+
+### Heroku
+
+Auth reuses the Heroku CLI token from `~/.netrc` (`heroku login`), falling
+back to `heroku auth:token`.
 
 ### Dokku
 
@@ -113,24 +106,21 @@ host: my-dokku   # any SSH destination: dokku@host, or a ~/.ssh/config alias
 app: myapp
 ```
 
-onair runs `ssh -o BatchMode=yes <host> <command> <app> --format json` for
-Dokku's report commands, so it needs Dokku 0.38 or newer and an `ssh` client.
-The host must log in as Dokku's `dokku` user, directly or through an alias
-with `User dokku`. Keys, addresses and users come from your SSH config;
-`BatchMode` never prompts, so the key must be loadable without a passphrase
-prompt (`ssh-add`).
+Needs Dokku 0.38+ and `ssh`. onair runs
+`ssh -o BatchMode=yes <host> <command> <app> --format json`. The host must
+log in as the `dokku` user, directly or via an alias with `User dokku`.
+`BatchMode` never prompts, so a key with a passphrase must be loaded with
+`ssh-add` first.
 
-The deployed commit is the one the last `git push` deployed. An app deployed
-another way (`git:from-image`, `git:sync`) shows the deploy source instead
-of a commit. Dokku builds record no commit, so `Pending` and `Failed` name
-the build, and pinned detection stays silent.
+Deployed is the commit that the last `git push` to Dokku deployed. An app
+deployed another way (such as `git:from-image` or `git:sync`) shows the
+deploy source instead. Dokku builds record no commit, so Pending and Failed
+name the build, and pinned is never shown.
 
 ### GitHub Deployments
 
-For teams whose CI deploys to a host most developers cannot reach (a Dokku
-box behind a firewall, a VPS where only admins hold SSH keys). If CI records
-each deploy as a GitHub Deployment, anyone who can read the repo sees what is
-deployed, with no access to the host.
+For hosts most developers cannot reach. If CI records each deploy as a GitHub
+Deployment, anyone who can read the repo sees what is deployed.
 
 ```yaml
 platform: github_deployments
@@ -139,25 +129,23 @@ environment: production  # default: production
 ```
 
 No `app:` is needed. onair reads the environment's last 10 deployments and
-the newest status of each through the GitHub API, with the token from
-`GH_TOKEN`, `GITHUB_TOKEN` or `gh auth token`; without one it asks you to run
-`gh auth login`. The token needs read access to the repo's deployments.
+the newest status of each. The token comes from `GH_TOKEN`, `GITHUB_TOKEN`
+or `gh auth token`, and needs read access to deployments. Without one, onair
+asks you to run `gh auth login`.
 
-- **Deployed** is the newest deployment whose status is `success`.
-- **Pending** is a newer deployment that is `queued`, `pending` or
-  `in_progress`, with its commit.
-- **Failed** is a newer deployment whose status is `failure` or `error`.
+- **Deployed** is the newest `success` deployment.
+- **Pending** is a newer `queued`, `pending` or `in_progress` one.
+- **Failed** is a newer `failure` or `error` one.
 - A deployment with no status yet is ignored.
-- With no successful deployment among the last 10, the report says so in one
-  line, under any Pending or Failed row.
+- With no success among the last 10, the report says so in one line, below
+  any Pending or Failed row.
 - If the status of a deployment newer than the deployed one cannot be read,
-  the report fails rather than show an older commit as running.
+  onair fails rather than show an older commit as running.
 
-**This adapter reports what CI recorded, not what the host runs.** A deploy
-that bypassed CI stays invisible until the next recorded one, and a CI job
-that records the sha it pushed reports that sha even if the host ended up
-running something else. So have CI record the sha it reads back from the host
-after the deploy, not the sha it pushed. For example, in GitHub Actions:
+**This reports what CI recorded, not what the host runs.** A deploy that
+bypassed CI stays invisible until the next recorded one. A CI job that
+records the sha it pushed is also wrong if the host ends up running
+something else. So have CI record the sha the host reports after the deploy:
 
 ```yaml
 permissions:
@@ -180,14 +168,10 @@ steps:
       gh api repos/${{ github.repository }}/deployments/$id/statuses -f state=$state
 ```
 
-Here `deploy.sh` deploys and `running-sha.sh` asks the host which commit it
-runs. When the host runs a different commit than the one pushed, the job
-records a failure rather than a false success.
+`running-sha.sh` asks the host which commit it runs, so a mismatch is
+recorded as a failure.
 
-### Task links (optional)
-
-If your commit subjects carry task ids (Jira, Linear, Notion, anything), tell
-onair how to recognize and link them:
+### Task links
 
 ```yaml
 task:
@@ -195,14 +179,14 @@ task:
   url: 'https://acme.atlassian.net/browse/{task}' # {task} = the matched id
 ```
 
-Matched ids in commit subjects become clickable terminal hyperlinks (the text
-stays identical), and `--json` gains a `task` object (`{ "id", "url" }`) per
-commit. No `task:` section - no behavior, nothing to opt out of.
+Task ids in commit subjects become terminal hyperlinks with the same text, and `--json` adds a
+`task` object (`{ "id", "url" }`) per commit. Without a `task:` section
+nothing changes.
 
-## JSON schema
+## JSON
 
-`onair --json` emits one object; the schema is a public API and only changes
-additively:
+`onair --json` prints one object. The schema is a public API and only
+changes additively.
 
 ```json
 {
@@ -232,32 +216,34 @@ additively:
 }
 ```
 
-- `delta.status` is `"current"`, `"behind"`, or `"unknown"`.
-- `environment` is the GitHub Deployments environment read, `null` on other
-  platforms. With `platform: github_deployments`, `app` is `null`, and
-  `deployed` is `null` when no deployment among the last 10 succeeded.
-- `pending`: `{ "sha", "build_id", "started_at", "subject", "author" }` when
+- `delta.status`: `"current"`, `"behind"` or `"unknown"`.
+- `environment`: the GitHub Deployments environment, else `null`. On that
+  platform `app` is `null`, and `deployed` is `null` when none of the last 10
+  succeeded.
+- `pending`: `{ "sha", "build_id", "started_at", "subject", "author" }` while
   a build is in flight. On Dokku `sha` is `null` and `build_id` names the
-  build; on Heroku `build_id` is `null`.
-- `version` is `null` on platforms that number no releases (Dokku), and a
-  Dokku `release` is a failed build with a `null` sha.
+  build. Elsewhere `build_id` is `null`.
 - `release`: `{ "sha", "version", "description", "status", "started_at",
-  "subject", "author" }` when a release newer than the running one is not
-  live; `status` is `"pending"` (release phase running) or `"failed"`. While
-  it carries a different sha, `delta.status` is never `"current"`.
-- `rollout`: dynos per process type against the running release. `up`
-  counts dynos serving it, `waiting` counts the rest of its dynos by state
-  (`starting`, `crashed`, ...), `previous` counts dynos on an older release.
-  `overlap_until` is an estimated end of the preboot handoff while it lasts,
-  otherwise `null`. `complete` is true once every dyno serves the running
-  release and no handoff remains. `null` when the dynos can't be read.
+  "subject", "author" }` for a newer release that is not live. `status` is
+  `"pending"` (release phase running) or `"failed"`. While its sha differs,
+  `delta.status` is never `"current"`. On Dokku it is a failed build with a
+  `null` sha.
+- `version`: `null` on platforms that number no releases (Dokku, GitHub
+  Deployments).
+- `rollout`: dynos per process type, or `null` when they can't be read.
+  It is always `null` on GitHub Deployments.
+  `up` counts dynos serving the running release. `waiting` counts the rest
+  by state (`starting`, `crashed`, ...). `previous` counts dynos on an older
+  release. `overlap_until` estimates the end of a preboot handoff while it
+  lasts, else `null`. `complete` is true once every dyno serves the running
+  release and no handoff remains.
 - `pinned`: `{ "version", "description", "latest_built_sha" }` when a newer
   build succeeded but is not running.
 - `yours`: `{ "sha", "had_own_build", "subject", "author" }` when your commit
   sits just below the deployed head.
-- `subject`/`author` are `null` when the commit isn't in the local repo.
+- `subject`/`author`: `null` when the commit isn't in the local repo.
 - `task`: `{ "id", "url" }` when a `task:` matcher is configured and the
-  subject contains a match, otherwise `null`.
+  subject matches, else `null`.
 
 ## Development
 
@@ -266,9 +252,8 @@ bundle install
 bundle exec rake        # specs + standard
 ```
 
-The behavioral source of truth is `reference/prod-release.sh`, the
-battle-tested bash script this gem was extracted from. The behavior spec in
-`spec/onair/report_spec.rb` ports its rules one by one.
+`reference/prod-release.sh`, the bash script this gem came from, is the
+behavioral source of truth. `spec/onair/report_spec.rb` ports its rules.
 
 ## License
 
