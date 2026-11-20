@@ -8,7 +8,7 @@
 
 [![Gem Version](https://img.shields.io/gem/v/onair-cli)](https://rubygems.org/gems/onair-cli)
 [![CI](https://github.com/amberpixels/onair-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/amberpixels/onair-cli/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE.txt)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 </div>
 
@@ -257,4 +257,4 @@ behavioral source of truth. `spec/onair/report_spec.rb` ports its rules.
 
 ## License
 
-MIT
+[MIT](LICENSE)
